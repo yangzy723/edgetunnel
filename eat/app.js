@@ -30,6 +30,8 @@ let state = {
   editingMeal = null,
   meals = [],
   mealSaving = false,
+  mealsSyncing = false,
+  mealsEpoch = 0,
   mealsKey = null,
   toastTimer, confirmAction = null,
   storageBlocked = false,
@@ -182,19 +184,25 @@ async function mealsRequest(method = 'GET', body, id) {
 
 function applyMeals(list) {
   if (!Array.isArray(list)) return;
+  mealsEpoch++;
   meals = list.map(validateMealItem).filter(Boolean);
   persistMeals()
 }
 
 async function syncMeals() {
-  if (mealSaving) return;
+  if (mealSaving || mealsSyncing) return;
+  // A save/delete can finish while this read is in flight; keep the newer snapshot.
+  const epoch = mealsEpoch;
+  mealsSyncing = true;
   try {
     const data = await mealsRequest('GET');
-    if (data && Array.isArray(data.meals)) {
+    if (epoch === mealsEpoch && !mealSaving && data && Array.isArray(data.meals)) {
       applyMeals(data.meals);
       renderMeals()
     }
-  } catch {}
+  } catch {} finally {
+    mealsSyncing = false
+  }
 }
 
 function cloudStatus(message, status = 'ok') {
@@ -870,6 +878,7 @@ if ($('add-meal')) {
       eatenAt: existing ? existing.eatenAt : Date.now()
     };
     mealSaving = true;
+    mealsEpoch++;
     render();
     try {
       const data = await mealsRequest(editingMeal ? 'PUT' : 'POST', body);
@@ -889,6 +898,7 @@ if ($('add-meal')) {
     $('meal-editor').close();
     confirm('删除这条吃过的记录？', '删除后将从云端共享记录中移除。', async () => {
       mealSaving = true;
+      mealsEpoch++;
       render();
       try {
         const data = await mealsRequest('DELETE', undefined, id);
@@ -1033,6 +1043,9 @@ document.addEventListener('visibilitychange', () => {
 setInterval(() => {
   if (!document.hidden) syncPool()
 }, 8000);
+setInterval(() => {
+  if (!document.hidden) void syncMeals()
+}, 30000);
 $('today-date').textContent = new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' }).format(new Date());
 render();
 syncPool();

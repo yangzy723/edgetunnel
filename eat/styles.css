@@ -161,7 +161,8 @@ input::placeholder { color: #8c9483 }
 .meal-name { margin: 0; font-size: 14px; font-weight: 750; overflow-wrap: anywhere }
 .meal-stars { flex-shrink: 0; font-size: 12px; letter-spacing: 1px; color: #d98a1c }
 .meal-time { display: block; margin-top: 2px; font-size: 11px; color: #7a8570 }
-.meal-dish { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 12px; font-weight: 600; color: #2f4332; padding: 6px 10px; border-radius: 10px; background: #f3f6ec }
+.meal-dish { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 12px; font-weight: 600; color: #2f4332; padding: 6px 10px; border-radius: 10px; background: #f3f6ec; overflow-wrap: anywhere; min-width: 0 }
+.meal-dish > span { min-width: 0; max-width: 100% }
 .meal-dish-tag { font-size: 10px; font-weight: 700; color: #4e6943; padding: 1px 6px; border-radius: 6px; background: #e1ead6 }
 .meal-note { margin: 0; font-size: 12px; line-height: 1.55; color: #5e6b57; overflow-wrap: anywhere }
 .history { margin-top: 26px; padding: 22px 0 6px; border-top: 1px solid var(--line) }

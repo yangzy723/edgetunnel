@@ -73,6 +73,23 @@ with sync_playwright() as p:
  desktop.evaluate('window.dispatchEvent(new Event("focus"))');expect(desktop.locator('.shop')).to_have_count(2)
  # Eaten meals persistent logging across devices (dish, rating, note, edit, delete).
  assert meals_api(missing=True)['status']==503
+ # Hold an old background response across a successful save.
+ phone.evaluate("""async () => {
+   while (mealsSyncing) await new Promise(resolve => setTimeout(resolve, 10));
+   const originalFetch = window.fetch;
+   window.fetch = (url, options) => {
+     if (url === '/eat/api/meals' && options?.method === 'GET') {
+       window.fetch = originalFetch;
+       return new Promise(resolve => {
+         window.releaseOldMeals = () => resolve(new Response(JSON.stringify({meals: []}), {
+           headers: {'Content-Type': 'application/json'}
+         }));
+       });
+     }
+     return originalFetch(url, options);
+   };
+   void syncMeals();
+ }""")
  phone.locator('#add-meal').click()
  phone.locator('#meal-shop-select').select_option('one')
  assert phone.locator('#meal-name').input_value()=='手机添加的店'
@@ -84,6 +101,20 @@ with sync_playwright() as p:
  expect(phone.locator('.meal-card')).to_have_count(1)
  expect(phone.locator('.meal-card .meal-dish')).to_contain_text('招牌红烧牛腩面')
  expect(phone.locator('.meal-card .meal-stars')).to_contain_text('★★★★★')
+ phone.evaluate('window.releaseOldMeals()')
+ phone.wait_for_function('!mealsSyncing')
+ expect(phone.locator('.meal-card')).to_have_count(1)
+ # Long user-entered dish names must wrap even without spaces on a small phone.
+ saved_meals=phone.evaluate('meals')
+ phone.evaluate("""() => {
+   meals = meals.map(meal => ({...meal, dish: 'W'.repeat(48)}));
+   renderMeals();
+ }""")
+ for width in [320,390]:
+  phone.set_viewport_size({'width':width,'height':844})
+  assert phone.evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Meal content overflow'
+  assert phone.locator('.meal-card').evaluate('(el) => el.scrollWidth <= el.clientWidth')
+ phone.evaluate('(saved) => { applyMeals(saved); renderMeals(); }',saved_meals)
  desktop.evaluate('window.dispatchEvent(new Event("focus"))')
  expect(desktop.locator('.meal-card')).to_have_count(1)
  expect(desktop.locator('.meal-card .meal-name')).to_have_text('手机添加的店')

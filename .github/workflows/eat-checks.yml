@@ -15,6 +15,23 @@ permissions:
   contents: read
 
 jobs:
+  music-webkit:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && 'main' || github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install browsers
+        run: |
+          python3 -m pip install -r eat/tests/requirements.txt
+          python3 -m playwright install chromium webkit
+      - name: Check music playback on macOS WebKit and Chromium
+        run: MUSIC_TEST_WEBKIT=1 python3 music/tests/test_music.py
   check:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
