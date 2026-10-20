@@ -30,7 +30,8 @@ server=ThreadingHTTPServer(('127.0.0.1',0),partial(AssetHandler,directory=str(ro
 Thread(target=server.serve_forever,daemon=True).start()
 base=f'http://127.0.0.1:{server.server_port}'
 with sync_playwright() as p:
-    engines=['chromium','webkit'] if os.environ.get('MUSIC_TEST_WEBKIT')=='1' else ['chromium']
+    import sys as _sys
+    engines=['chromium','webkit'] if (os.environ.get('MUSIC_TEST_WEBKIT')=='1' and _sys.platform=='darwin') else ['chromium']
     for engine in engines:
         browser=getattr(p,engine).launch(executable_path=os.environ.get('CHROME_BIN') if engine=='chromium' else None,headless=True)
         page=browser.new_page(viewport={'width':390,'height':844},is_mobile=True,has_touch=True)

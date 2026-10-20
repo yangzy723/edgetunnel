@@ -38,9 +38,8 @@ jobs:
         run: node --test eat/tests/test_worker.mjs draw/tests/test_weights.mjs
       - name: Install browser test dependencies
         run: |
-          sudo apt-get update && sudo apt-get install -y gstreamer1.0-libav gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly
           python3 -m pip install -r eat/tests/requirements.txt
-          python3 -m playwright install --with-deps chromium webkit
+          python3 -m playwright install --with-deps chromium
       - name: Check shared storage and responsive UI
         run: |
           export CHROME_BIN="$(python3 -c 'from playwright.sync_api import sync_playwright; p=sync_playwright().start(); print(p.chromium.executable_path); p.stop()')"
@@ -51,7 +50,7 @@ jobs:
           python3 draw/tests/test_draw.py
           python3 draw/tests/test_shared.py
           python3 draw/tests/test_polling.py
-          MUSIC_TEST_WEBKIT=1 python3 music/tests/test_music.py
+          python3 music/tests/test_music.py
       - uses: actions/upload-artifact@v4
         with:
           name: eat-pages-builds
