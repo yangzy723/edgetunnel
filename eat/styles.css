@@ -61,9 +61,9 @@ h1 span { background: linear-gradient(125deg, var(--red), #e06a3b); -webkit-back
 .layout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 24px }
 .lottery, .pool, .meals-section { border-radius: 28px; border: 1px solid rgba(255, 255, 255, .92); outline: 1px solid rgba(67, 87, 62, .08); box-shadow: var(--shadow-card); min-width: 0; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px) }
 .lottery { position: sticky; top: 20px; background: linear-gradient(150deg, rgba(226, 237, 217, .82), rgba(247, 249, 240, .74)); padding: 24px 26px; overflow: hidden }
+.panel-title { margin: 0; font-size: 21px; line-height: 1.35; letter-spacing: -.3px }
 .panel-top { display: flex; justify-content: space-between; align-items: center; gap: 12px }
 .tiny { font-size: 11px; letter-spacing: 1px; color: #5b6b52; font-weight: 650 }
-.section-number { display: inline-block; font-family: Georgia, serif; font-style: italic; font-size: 16px; margin-right: 7px; color: #748766 }
 .live-count { padding: 5px 11px; border: 1px solid rgba(116, 135, 102, .24); border-radius: 20px; background: rgba(255, 255, 255, .82); color: #435738; font-size: 11px; font-weight: 600; white-space: nowrap }
 .wheel-context { margin: 14px 0 0; text-align: center; color: #5f7055; font-size: 11px; min-height: 17px }
 .wheel-area { position: relative; width: min(100%, 316px); aspect-ratio: 1; margin: 19px auto 24px }
@@ -73,7 +73,7 @@ h1 span { background: linear-gradient(125deg, var(--red), #e06a3b); -webkit-back
 .wheel svg { display: block; width: 100%; height: 100% }
 .pointer { position: absolute; top: -7px; left: calc(50% - 12px); width: 24px; height: 34px; background: linear-gradient(180deg, #e2583c, var(--red)); clip-path: polygon(0 0,100% 0,50% 100%); z-index: 3; transform-origin: 50% 15%; filter: drop-shadow(0 3px 5px rgba(31, 46, 37, .22)) }
 .wheel-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%) rotate(-8deg); width: 76px; height: 76px; display: grid; place-content: center; border: 2px solid var(--ink); border-radius: 50%; background: #fffdf7; box-shadow: 0 6px 16px rgba(31, 46, 37, .16), 3px 3px 0 rgba(31, 46, 37, .12); text-align: center; font-size: 17px; font-weight: 800; line-height: 1.25; pointer-events: none }
-.result { position: relative; display: flex; flex-direction: column; justify-content: safe center; text-align: center; height: 164px; overflow-y: auto; scrollbar-width: thin; scrollbar-gutter: stable both-edges; padding: 15px 14px; background: rgba(255, 255, 252, .78); border: 1px solid rgba(255, 255, 255, .96); box-shadow: inset 0 1px 0 #fff, 0 3px 16px #384d2710; border-radius: 18px; transition: background .25s, border-color .25s, box-shadow .25s }
+.result { position: relative; display: flex; flex-direction: column; justify-content: safe center; text-align: center; height: 120px; overflow-y: auto; scrollbar-width: thin; scrollbar-gutter: stable both-edges; padding: 15px 14px; background: rgba(255, 255, 252, .78); border: 1px solid rgba(255, 255, 255, .96); box-shadow: inset 0 1px 0 #fff, 0 3px 16px #384d2710; border-radius: 18px; transition: background .25s, border-color .25s, box-shadow .25s }
 .result > * { flex-shrink: 0 }
 .result .caption { color: #5f7055; font-size: 11px; font-weight: 600 }
 .result h2 { margin: 6px 0; font-size: 24px; font-weight: 800; line-height: 1.35; overflow-wrap: anywhere }
@@ -94,8 +94,6 @@ h1 span { background: linear-gradient(125deg, var(--red), #e06a3b); -webkit-back
 .pool-shortcut { text-decoration: underline; text-underline-offset: 4px; font-weight: 600 }
 .pool { padding: 24px; background: var(--card); scroll-margin-top: 20px }
 .pool-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px }
-.pool-kicker { font-size: 10px; margin-bottom: 4px }
-.pool-kicker .section-number { font-size: 14px }
 .pool-head h2, .meals-head h2 { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 21px; line-height: 1.35; margin: 0 }
 .pool-head h2 small, .meals-head h2 small { font-size: 11px; font-weight: 650; color: #4f6344; padding: 3px 9px; border-radius: 999px; background: #e8efe0; white-space: nowrap }
 .add-button { flex-shrink: 0; border: 0; padding: 11px 15px; background: var(--ink); color: white; border-radius: 12px; font-size: 12px; font-weight: 650; box-shadow: 0 6px 14px -4px rgba(31, 46, 37, .28); transition: transform .16s, background .16s }
@@ -244,10 +242,13 @@ html { scroll-behavior: smooth; scroll-padding-top: 24px }
 @media(min-width:761px) {
   .lottery { position: relative; top: auto; display: flex; flex-direction: column }
   .lottery > * { flex-shrink: 0 }
-  .lottery .result-actions { margin-bottom: 16px }
-  .lottery .spin-button { margin-top: auto }
-  .pool { display: flex; flex-direction: column }
-  .pool-foot { margin-top: auto; padding-top: 14px }
+  .lottery .result-actions { margin-bottom: 0 }
+  .lottery .spin-button { margin-top: 10px }
+  /* Let the decision panel set the height; scroll the menu instead of stretching empty space. */
+  .pool { display: flex; flex-direction: column; contain: size; min-height: 0 }
+  .pool > :not(.cards) { flex-shrink: 0 }
+  .pool .cards { flex: 1; min-height: 0; max-height: none }
+  .pool-foot { margin-top: 12px }
 }
 @media(max-width:1000px) {
   .intro-aside { gap: 12px }
@@ -288,8 +289,9 @@ html { scroll-behavior: smooth; scroll-padding-top: 24px }
   .wheel-area { width: min(100%,244px); margin: 16px auto 20px }
   .wheel-context { margin-top: 10px; font-size: 10px }
   .wheel-center { width: 65px; height: 65px; font-size: 15px }
-  .result { height: 152px; padding: 12px 10px }
+  .result { height: 120px; padding: 12px 10px }
   .result h2 { font-size: 22px }
+  .panel-title { font-size: 18px }
   .result-actions { gap: 6px }
   .action-pill { padding: 5px 9px; font-size: 10px }
   .spin-button { padding: 14px; margin-top: 13px }
@@ -298,8 +300,6 @@ html { scroll-behavior: smooth; scroll-padding-top: 24px }
   .pool-head { flex-wrap: nowrap; margin-bottom: 16px; gap: 9px }
   .meals-head { margin-bottom: 16px; gap: 12px }
   .pool-head h2, .meals-head h2 { font-size: 18px; gap: 6px }
-  .pool-kicker { font-size: 9px; letter-spacing: .4px }
-  .pool-kicker .section-number { margin-right: 4px; font-size: 12px }
   .add-button { font-size: 11px; padding: 10px 11px }
   .chip { padding: 6px 10px; font-size: 11px }
   .filter-bar { padding: 10px }
