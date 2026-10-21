@@ -1,6 +1,6 @@
 :root {
-  --paper: #f5f3ed;
-  --card: rgba(255, 255, 255, .86);
+  --paper: #f4f2eb;
+  --card: rgba(255, 255, 255, .70);
   --card-solid: #fffefa;
   --ink: #1f2e25;
   --red: #d4482c;
@@ -9,7 +9,7 @@
   --line: rgba(36, 56, 42, .11);
   --line-strong: rgba(36, 56, 42, .18);
   --yellow: #f4c654;
-  --shadow-card: 0 18px 44px -16px rgba(25, 42, 31, .09), 0 2px 8px rgba(25, 42, 31, .04);
+  --shadow-card: inset 0 1px 0 #fff, 0 18px 46px -24px rgba(40, 65, 45, .19), 0 2px 6px rgba(25, 42, 31, .03);
   --shadow-soft: 0 6px 18px -6px rgba(25, 42, 31, .07);
   color-scheme: light
 }
@@ -19,10 +19,10 @@ body {
   margin: 0;
   background-color: var(--paper);
   background-image:
-    radial-gradient(900px circle at 8% -6%, rgba(244, 198, 84, .22), transparent 58%),
-    radial-gradient(820px circle at 92% 4%, rgba(145, 178, 134, .22), transparent 56%),
+    radial-gradient(900px circle at 8% -6%, rgba(239, 198, 112, .29), transparent 58%),
+    radial-gradient(820px circle at 92% 4%, rgba(155, 186, 159, .29), transparent 56%),
     radial-gradient(760px circle at 50% 100%, rgba(212, 72, 44, .08), transparent 62%);
-  background-attachment: fixed;
+  background-repeat: no-repeat;
   color: var(--ink);
   font: 14px/1.55 ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   -webkit-font-smoothing: antialiased
@@ -37,7 +37,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .skip-link { position: fixed; top: 8px; left: 12px; padding: 10px 20px; background: var(--ink); color: white; border-radius: 10px; z-index: 30; transform: translateY(-150%) }
 .skip-link:focus { transform: translateY(0) }
 header, main, footer { max-width: 1200px; margin: auto }
-header { padding: 20px 32px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--line) }
+header { padding: 24px 32px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--line) }
 .brand { display: flex; align-items: center; gap: 11px; font-size: 20px; font-weight: 800; letter-spacing: .8px; white-space: nowrap }
 .brand-icon { display: grid; place-items: center; width: 38px; height: 40px; background: linear-gradient(140deg, #e1573b, var(--red)); color: white; border-radius: 12px; transform: rotate(-7deg); font-family: ui-serif, "Songti SC", serif; font-size: 23px; box-shadow: 0 6px 14px rgba(212, 72, 44, .26) }
 .edition { margin-left: 8px; color: var(--muted); font-size: 10px; letter-spacing: 2px }
@@ -45,8 +45,8 @@ header { padding: 20px 32px; display: flex; align-items: center; justify-content
 .local-pill::before { content: ''; width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: #4d8a55; box-shadow: 0 0 0 3px rgba(77, 138, 85, .18) }
 .local-pill[data-status=busy]::before { background: #c58f2b; box-shadow: 0 0 0 3px rgba(197, 143, 43, .2) }
 .local-pill[data-status=error]::before { background: var(--red); box-shadow: 0 0 0 3px rgba(212, 72, 44, .2) }
-main { padding: 34px 32px 24px }
-.intro { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 30px }
+main { padding: 40px 32px 24px }
+.intro { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 24px }
 .eyebrow { font-size: 10px; font-weight: 750; letter-spacing: 2px; color: var(--red) }
 .eyebrow>span { padding: 0 8px; opacity: .5 }
 h1 { margin: 10px 0 12px; font-family: ui-serif, "Songti SC", STSong, serif; font-size: clamp(36px, 4.5vw, 56px); font-weight: 800; line-height: 1.18; letter-spacing: -1.8px }
@@ -59,21 +59,21 @@ h1 span { background: linear-gradient(125deg, var(--red), #e06a3b); -webkit-back
 .doodle b { font-size: 18px; white-space: nowrap }
 .connection-note { padding: 12px 16px; border: 1px solid #e6ce9e; border-radius: 14px; background: rgba(255, 245, 216, .92); color: #74511d; font-size: 12px; margin: 0 0 20px; box-shadow: var(--shadow-soft) }
 .layout { display: grid; grid-template-columns: minmax(0, .96fr) minmax(0, 1.04fr); align-items: start; gap: 24px }
-.lottery, .pool, .meals-section { border-radius: 26px; border: 1px solid rgba(255, 255, 255, .75); outline: 1px solid var(--line); box-shadow: var(--shadow-card); min-width: 0; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px) }
-.lottery { position: sticky; top: 20px; background: linear-gradient(165deg, rgba(232, 239, 223, .9), rgba(242, 245, 235, .88)); padding: 24px 26px; overflow: hidden }
+.lottery, .pool, .meals-section { border-radius: 28px; border: 1px solid rgba(255, 255, 255, .92); outline: 1px solid rgba(67, 87, 62, .08); box-shadow: var(--shadow-card); min-width: 0; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px) }
+.lottery { position: sticky; top: 20px; background: linear-gradient(150deg, rgba(226, 237, 217, .82), rgba(247, 249, 240, .74)); padding: 24px 26px; overflow: hidden }
 .panel-top { display: flex; justify-content: space-between; align-items: center; gap: 12px }
 .tiny { font-size: 11px; letter-spacing: 1px; color: #5b6b52; font-weight: 650 }
 .section-number { display: inline-block; font-family: Georgia, serif; font-style: italic; font-size: 16px; margin-right: 7px; color: #748766 }
 .live-count { padding: 5px 11px; border: 1px solid rgba(116, 135, 102, .24); border-radius: 20px; background: rgba(255, 255, 255, .82); color: #435738; font-size: 11px; font-weight: 600; white-space: nowrap }
 .wheel-context { margin: 14px 0 0; text-align: center; color: #5f7055; font-size: 11px; min-height: 17px }
 .wheel-area { position: relative; width: min(100%, 316px); aspect-ratio: 1; margin: 19px auto 24px }
-.wheel-area::before { content: ''; position: absolute; inset: -7px; border: 1.5px dashed rgba(132, 149, 115, .55); border-radius: 50%; pointer-events: none }
+.wheel-area::before { content: ''; position: absolute; inset: -7px; border: 1px solid rgba(132, 149, 115, .4); box-shadow: 0 0 0 6px rgba(255, 255, 255, .23); border-radius: 50%; pointer-events: none }
 .wheel-shell { position: absolute; inset: 4px; border-radius: 50%; border: 8px solid #fffdf7; box-shadow: 0 6px 0 #cbd4bc, 0 14px 28px rgba(45, 62, 38, .12); overflow: hidden }
 .wheel { width: 100%; height: 100%; contain: layout paint; transition: transform 3.8s cubic-bezier(.12,.68,.12,1) }
 .wheel svg { display: block; width: 100%; height: 100% }
 .pointer { position: absolute; top: -7px; left: calc(50% - 12px); width: 24px; height: 34px; background: linear-gradient(180deg, #e2583c, var(--red)); clip-path: polygon(0 0,100% 0,50% 100%); z-index: 3; transform-origin: 50% 15%; filter: drop-shadow(0 3px 5px rgba(31, 46, 37, .22)) }
 .wheel-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%) rotate(-8deg); width: 76px; height: 76px; display: grid; place-content: center; border: 2px solid var(--ink); border-radius: 50%; background: #fffdf7; box-shadow: 0 6px 16px rgba(31, 46, 37, .16), 3px 3px 0 rgba(31, 46, 37, .12); text-align: center; font-size: 17px; font-weight: 800; line-height: 1.25; pointer-events: none }
-.result { position: relative; display: flex; flex-direction: column; justify-content: safe center; text-align: center; height: 164px; overflow-y: auto; scrollbar-width: thin; scrollbar-gutter: stable both-edges; padding: 15px 14px; background: rgba(255, 255, 252, .78); border: 1px dashed rgba(125, 142, 109, .45); border-radius: 18px; transition: background .25s, border-color .25s, box-shadow .25s }
+.result { position: relative; display: flex; flex-direction: column; justify-content: safe center; text-align: center; height: 164px; overflow-y: auto; scrollbar-width: thin; scrollbar-gutter: stable both-edges; padding: 15px 14px; background: rgba(255, 255, 252, .78); border: 1px solid rgba(255, 255, 255, .96); box-shadow: inset 0 1px 0 #fff, 0 3px 16px #384d2710; border-radius: 18px; transition: background .25s, border-color .25s, box-shadow .25s }
 .result > * { flex-shrink: 0 }
 .result .caption { color: #5f7055; font-size: 11px; font-weight: 600 }
 .result h2 { margin: 6px 0; font-size: 24px; font-weight: 800; line-height: 1.35; overflow-wrap: anywhere }
@@ -100,7 +100,7 @@ h1 span { background: linear-gradient(125deg, var(--red), #e06a3b); -webkit-back
 .pool-head h2 small, .meals-head h2 small { font-size: 11px; font-weight: 650; color: #4f6344; padding: 3px 9px; border-radius: 999px; background: #e8efe0; white-space: nowrap }
 .add-button { flex-shrink: 0; border: 0; padding: 11px 15px; background: var(--ink); color: white; border-radius: 12px; font-size: 12px; font-weight: 650; box-shadow: 0 6px 14px -4px rgba(31, 46, 37, .28); transition: transform .16s, background .16s }
 .add-button:enabled:active { transform: scale(.96) }
-.filter-bar { padding: 13px; background: rgba(242, 239, 230, .78); border: 1px solid var(--line); border-radius: 18px }
+.filter-bar { padding: 13px; background: rgba(237, 240, 229, .65); border: 1px solid var(--line); border-radius: 18px }
 .search-box { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--card-solid); padding: 0 12px; margin-bottom: 11px; color: #728068; box-shadow: inset 0 1px 2px rgba(25, 42, 31, .03) }
 .search-box>span:first-child { font-size: 22px; line-height: 1 }
 .search-box input { width: 100%; min-width: 0; padding: 10px 0; border: 0; outline-offset: 1px; background: transparent; color: var(--ink); font-size: 13px }
@@ -205,6 +205,33 @@ dialog[open] { animation: dialog-arrive .2s ease-out both }
 @keyframes hungry-nod { to { transform: translate(-50%,-50%) rotate(7deg) scale(1.04) } }
 @keyframes reveal-bite { 0% { transform: translateY(8px) scale(.94); opacity: 0 } 65% { transform: translateY(-2px) scale(1.025); opacity: 1 } 100% { transform: none; opacity: 1 } }
 @keyframes dialog-arrive { from { transform: translateY(10px); opacity: 0 } to { transform: none; opacity: 1 } }
+/* Glass is limited to the main surfaces; list rows stay opaque and inexpensive. */
+html { scroll-behavior: smooth; scroll-padding-top: 24px }
+#lottery, #meals-section { scroll-margin-top: 24px }
+.section-nav { display: flex; flex-wrap: wrap; gap: 6px; width: fit-content; padding: 5px; margin: 0 0 28px; border: 1px solid #ffffffeb; outline: 1px solid var(--line); border-radius: 18px; background: #ffffff80; box-shadow: inset 0 1px 0 #fff, 0 5px 18px #364b2510; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px) }
+.section-nav a { display: flex; align-items: center; justify-content: center; gap: 9px; min-height: 44px; padding: 10px 17px; border-radius: 13px; color: #4b6148; font-size: 12px; font-weight: 650; transition: background .18s, color .18s }
+.section-nav a:first-child { background: #fffdfa; color: var(--red); box-shadow: 0 2px 6px #3447240a }
+.section-nav a:hover { background: #fffdfa; color: var(--red) }
+.section-nav a > span { font-size: 17px; line-height: 1 }
+.meals-head > div { min-width: 0 }
+.meal-title-row { flex-wrap: wrap; gap: 3px 8px }
+.meal-card { border-top-color: #fff; background: linear-gradient(150deg, #fffefa, #fafbf5) }
+.meal-card-head { align-items: flex-start }
+.meal-time { font-variant-numeric: tabular-nums }
+.icon-btn, .toggle, .text-btn, .chip, .soft-btn { min-height: 44px }
+.icon-btn { min-width: 44px }
+.result-actions { min-height: 44px }
+.result-actions .action-pill { min-height: 36px }
+@keyframes surface-appear { from { opacity: 0 } to { opacity: 1 } }
+@keyframes intro-appear { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
+@media(prefers-reduced-motion:no-preference) {
+  .intro { animation: intro-appear .45s ease-out both }
+  .section-nav { animation: intro-appear .45s .06s ease-out both }
+  .lottery, .pool { animation: surface-appear .5s ease-out }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .pool, .meals-section, .section-nav { background: #fffefa }
+}
 @media(hover:hover) {
   .primary:enabled:hover { transform: translateY(-2px) }
   .add-button:enabled:hover, .local-pill:enabled:hover, .action-pill:enabled:hover { transform: translateY(-1px) }
@@ -230,6 +257,15 @@ dialog[open] { animation: dialog-arrive .2s ease-out both }
   .edition, .today-date { display: none }
   .local-pill { font-size: 10px; padding: 7px 10px }
   main { padding: 24px 18px 12px }
+  header, main, footer { padding-left: max(18px,env(safe-area-inset-left)); padding-right: max(18px,env(safe-area-inset-right)) }
+  footer { padding-bottom: max(24px,env(safe-area-inset-bottom)) }
+  .section-nav { width: 100%; gap: 2px; margin-bottom: 22px; border-radius: 15px }
+  .section-nav a { flex: 1; padding: 8px 4px; gap: 5px; font-size: 11px; white-space: nowrap }
+  .section-nav a > span { font-size: 15px }
+  .lottery, .pool, .meals-section { backdrop-filter: none; -webkit-backdrop-filter: none }
+  .pool, .meals-section { background: rgba(255,255,252,.9) }
+  .meals-head { flex-wrap: wrap }
+  .meals-sub { max-width: 30em; line-height: 1.8 }
   .intro { margin-bottom: 22px; gap: 12px }
   .eyebrow { font-size: 9px; letter-spacing: 1px }
   .intro .eyebrow { max-width: 230px }
@@ -251,7 +287,8 @@ dialog[open] { animation: dialog-arrive .2s ease-out both }
   .spin-button { padding: 14px; margin-top: 13px }
   .lottery-foot { margin-top: 13px }
   .pool, .meals-section { padding: 20px 16px; border-radius: 22px }
-  .pool-head, .meals-head { flex-wrap: nowrap; margin-bottom: 16px; gap: 9px }
+  .pool-head { flex-wrap: nowrap; margin-bottom: 16px; gap: 9px }
+  .meals-head { margin-bottom: 16px; gap: 12px }
   .pool-head h2, .meals-head h2 { font-size: 18px; gap: 6px }
   .pool-kicker { font-size: 9px; letter-spacing: .4px }
   .pool-kicker .section-number { margin-right: 4px; font-size: 12px }
@@ -268,7 +305,7 @@ dialog[open] { animation: dialog-arrive .2s ease-out both }
   .shop-name { font-size: 13px }
   .shop-title { flex-wrap: wrap }
   .shop-note { font-size: 10px }
-  .shop .icon-btn { min-width: 28px; padding: 5px }
+  .shop .icon-btn { min-width: 36px; padding: 5px }
   .meals-grid { grid-template-columns: 1fr }
   .history { margin-top: 24px; padding-top: 20px }
   .history h3 { font-size: 14px }

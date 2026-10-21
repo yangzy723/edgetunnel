@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { execFileSync } from 'node:child_process';
-import { mkdtemp, readFile, writeFile, readdir, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile, readdir, rm, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -71,7 +71,9 @@ async function fixture(t, mode) {
     ['/eatery', 'GET'], ['/eat/assets/missing', 'GET'], ['/eat', 'POST'],
     ['/eat', 'GET', { Upgrade: 'websocket' }],
     ['/eat/api/pool', 'GET', { Upgrade: 'websocket' }],
-    ['/drawing', 'GET'], ['/draw/assets/missing', 'GET'], ['/draw', 'POST'],
+    ['/draw', 'GET'], ['/draw/', 'GET'], ['/draw/api/config', 'GET'],
+    ['/draw/api/draw', 'POST'], ['/music', 'GET'], ['/music/Test-A/', 'GET'],
+    ['/Test-A', 'GET'], ['/drawing', 'GET'], ['/draw/assets/missing', 'GET'], ['/draw', 'POST'],
     ['/draw', 'GET', { Upgrade: 'websocket' }],
   ]) {
     const request = new Request(`https://example.test${path}`, { method, headers, body: method === 'POST' ? 'unchanged' : undefined });
@@ -81,47 +83,6 @@ async function fixture(t, mode) {
     assert.equal(env.received.request, request);
     assert.equal(env.received.ctx, ctx);
     if (method === 'POST') assert.equal(await request.text(), 'unchanged');
-  }
-});
-
-test('draw routes serve the new page in both modes with independent cache validation', async t => {
-  for (const mode of ['combined', 'standalone']) {
-    const { modules, out } = await fixture(t, mode);
-    const photos = await readdir(join(out, 'draw/images'));
-    assert.equal(photos.length, 6);
-    for (const name of photos) {
-      const bytes = await readFile(join(out, 'draw/images', name));
-      assert.ok(name.includes(createHash('sha256').update(bytes).digest('hex').slice(0,12)));
-    }
-    assert.deepEqual(JSON.parse(await readFile(join(out, '_routes.json'), 'utf8')).exclude, ['/draw/images/*', '/music', '/music/*']);
-    assert.match(await readFile(join(out, '_headers'), 'utf8'), /immutable/);
-    const { default: worker } = await import(pathToFileURL(join(modules, 'index.js')));
-    const unavailable = await worker.fetch(new Request('https://example.test/draw/api/config'), {}, {});
-    assert.equal(unavailable.status, 503);
-    assert.equal((await unavailable.json()).code, 'UNAVAILABLE');
-    const noPassword = await worker.fetch(new Request('https://example.test/draw/api/auth'), {}, {});
-    assert.equal(noPassword.status, 503);
-    assert.equal((await noPassword.json()).code, 'AUTH_NOT_CONFIGURED');
-    for (const path of ['/draw', '/draw/']) {
-      const url = 'https://example.test' + path;
-      const first = await worker.fetch(new Request(url), {}, {});
-      assert.equal(first.status, 200);
-      const html = await first.text();
-      assert.match(html, /兴享好礼/);
-      assert.match(html, /维达联名抽纸/);
-      assert.doesNotMatch(html, /src="\/draw\/app.js"|href="\/draw\/styles.css"/);
-      const tag = '"draw-page-' + createHash('sha256').update(html).digest('hex').slice(0,24) + '"';
-      assert.equal(first.headers.get('ETag'), tag);
-      const cached = await worker.fetch(new Request(url, {headers:{'If-None-Match': 'W/' + tag}}), {}, {});
-      assert.equal(cached.status, 304);
-      assert.equal(await cached.text(), '');
-      const head = await worker.fetch(new Request(url, {method:'HEAD'}), {}, {});
-      assert.equal(head.status, 200);
-      assert.equal(await head.text(), '');
-      assert.equal(head.headers.get('ETag'), tag);
-      const stale = await worker.fetch(new Request(url, {headers:{'If-None-Match':'"old"'}}), {}, {});
-      assert.equal(stale.status, 200);
-    }
   }
 });
 
@@ -194,25 +155,19 @@ test('HTML revalidation skips unchanged content and sends the current page for s
   assert.equal(await head.text(), '');
 });
 
-test('music builds four static questions with anonymous media and short URL redirects', async t => {
-  const {modules,out}=await fixture(t,'combined');
-  const {default:worker}=await import(pathToFileURL(join(modules,'index.js')));
-  for(const letter of 'ABCD') {
-    const html=await readFile(join(out,`music/Test-${letter}/index.html`),'utf8');
-    assert.match(html,new RegExp(`题目 ${letter}`));
-    assert.match(html,/preload="none"/);
-    assert.doesNotMatch(html,/autoplay|\{\{/);
-    const path=html.match(/src="(\/music\/assets\/track-[^"]+\.mp3)"/)[1];
-    const bytes=await readFile(join(out,path));
-    assert.ok(bytes.length>0);
-    assert.notEqual(bytes.subarray(0,3).toString(),'ID3');
-    assert.equal(bytes[0],255);
-    for(const method of ['GET','HEAD']) {
-      const response=await worker.fetch(new Request(`https://example.test/Test-${letter}?entry=qr`,{method}),{},{});
-      assert.equal(response.status,302);
-      assert.equal(response.headers.get('Location'),`https://example.test/music/Test-${letter}/?entry=qr`);
-    }
+test('rebuilding removes retired activity assets and excludes activity modules', async t => {
+  const { out, modules } = await fixture(t, 'standalone');
+  for (const name of ['draw', 'music']) {
+    await mkdir(join(out, name), { recursive: true });
+    await writeFile(join(out, name, 'old.html'), 'retired activity');
   }
-  assert.equal((await readdir(join(out,'music/assets'))).filter(name=>name.endsWith('.mp3')).length,4);
-  assert.ok(!(await readdir(modules)).some(name=>name.endsWith('.mp3')));
+  build('standalone', out);
+  const files = await readdir(out);
+  assert.ok(!files.includes('draw') && !files.includes('music'));
+  assert.deepEqual((await readdir(modules)).sort(), ['api.js', 'index.js', 'page.js', 'worker.js']);
+  assert.deepEqual(JSON.parse(await readFile(join(out, '_routes.json'), 'utf8')).exclude, []);
+  const { default: worker } = await import(pathToFileURL(join(modules, 'index.js')));
+  for (const path of ['/draw', '/draw/api/config', '/music', '/music/Test-A/', '/Test-A']) {
+    assert.equal((await worker.fetch(new Request('https://example.test' + path), {}, {})).status, 404);
+  }
 });

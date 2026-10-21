@@ -2,8 +2,8 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#f5f3ee">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f4f2eb">
 <meta name="description" content="把纠结交给饭点。筛选口味和预算，用一点运气决定下一顿，和朋友共享你的美味奖池与吃过的美食足迹。">
 <title>饭点事务所 · 今天吃什么</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23de5538'/%3E%3Cstop offset='1' stop-color='%23b83a22'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='40' height='40' rx='12' fill='url(%23g)'/%3E%3Ctext x='20' y='28' text-anchor='middle' font-size='23' font-weight='800' fill='%23fffdf7'%3E食%3C/text%3E%3C/svg%3E">
@@ -27,9 +27,14 @@
 </div>
 <div class="intro-aside"><span class="today-date" id="today-date"></span><div class="doodle" aria-hidden="true">人生大事<b>好好吃饭</b>EST. TODAY ✦</div></div>
 </section>
+<nav class="section-nav" aria-label="饭点导航">
+<a href="#lottery"><span aria-hidden="true">✳</span> 今日美味签</a>
+<a href="#pool"><span aria-hidden="true">☰</span> 挑挑口味</a>
+<a href="#meals-section"><span aria-hidden="true">♡</span> 吃过清单</a>
+</nav>
 <p class="connection-note" id="connection-note" role="status" hidden></p>
 <div class="layout">
-<section class="lottery" id="lottery" aria-label="抽奖转盘">
+<section class="lottery" id="lottery" aria-label="今日美味签">
 <div class="panel-top">
 <span class="tiny"><span class="section-number">01</span> 今日美味签</span>
 <span class="live-count" id="eligible-count">
@@ -104,11 +109,11 @@
 <section class="meals-section" id="meals-section" aria-label="曾经吃过的食物">
 <div class="meals-head">
 <div>
-<div class="tiny pool-kicker"><span class="section-number">03</span> 共享味蕾记忆 · 持久保存在云端</div>
+<div class="tiny pool-kicker"><span class="section-number">03</span> 把喜欢，留给下一餐</div>
 <h2>曾经吃过的美味<small id="meals-count">0 顿</small></h2>
-<p class="meals-sub">手动记录每一顿真实吃过的好味道，填写招牌菜与评分，所有设备同步留存。</p>
+<p class="meals-sub">记下招牌菜，留一句评价。下次纠结，就来翻翻这份清单。</p>
 </div>
-<button class="add-button meal-add-button" id="add-meal">＋ 记一顿吃过的</button>
+<button class="add-button meal-add-button" id="add-meal">＋ 记一顿</button>
 </div>
 <div class="meals-grid" id="meals-list" role="region" aria-label="吃过的食物列表">
 </div>

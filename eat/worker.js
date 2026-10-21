@@ -5,28 +5,18 @@ import {
 import {
   EAT_HTML, EAT_ETAG
 } from './page.js';
-import { DRAW_HTML, DRAW_ETAG } from './draw-page.js';
-import { drawAPI } from './draw-api.js';
-
 // Returning null delegates the original Request, env and ctx to the host application.
 export async function handleEat(request, env) {
   if ((request.headers.get('Upgrade') || '').trim()) return null;
   const {
     pathname
   } = new URL(request.url);
-  if (/^\/Test-[A-D]\/?$/.test(pathname) && ['GET','HEAD'].includes(request.method)) {
-    const destination = new URL(request.url);
-    destination.pathname = '/music/' + pathname.split('/')[1] + '/';
-    return Response.redirect(destination.href,302);
-  }
   if (pathname === '/eat/api/pool') return eatPoolAPI(request, env);
   if (pathname === '/eat/api/meals') return eatMealsAPI(request, env);
-  if (pathname.startsWith('/draw/api/')) return drawAPI(request, env);
-  const isDraw = pathname === '/draw' || pathname === '/draw/';
-  if ((pathname === '/eat' || pathname === '/eat/' || isDraw) &&
+  if ((pathname === '/eat' || pathname === '/eat/') &&
     (request.method === 'GET' || request.method === 'HEAD')) {
-    const html = isDraw ? DRAW_HTML : EAT_HTML;
-    const etag = isDraw ? DRAW_ETAG : EAT_ETAG;
+    const html = EAT_HTML;
+    const etag = EAT_ETAG;
     const headers = {
       'Content-Type': 'text/html; charset=utf-8',
       'Cache-Control': 'no-cache',

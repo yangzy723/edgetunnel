@@ -2,9 +2,9 @@ name: Eat checks
 
 on:
   push:
-    paths: ['eat/**', 'draw/**', 'music/**', '_worker.js', '.github/workflows/eat-checks.yml']
+    paths: ['eat/**', '_worker.js', '.github/workflows/eat-checks.yml']
   pull_request:
-    paths: ['eat/**', 'draw/**', 'music/**', '_worker.js', '.github/workflows/eat-checks.yml']
+    paths: ['eat/**', '_worker.js', '.github/workflows/eat-checks.yml']
   workflow_dispatch:
   # GITHUB_TOKEN pushes made by the existing sync job do not trigger push workflows.
   workflow_run:
@@ -15,23 +15,6 @@ permissions:
   contents: read
 
 jobs:
-  music-webkit:
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
-    runs-on: macos-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event_name == 'workflow_run' && 'main' || github.sha }}
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install browsers
-        run: |
-          python3 -m pip install -r eat/tests/requirements.txt
-          python3 -m playwright install chromium webkit
-      - name: Check music playback on macOS WebKit and Chromium
-        run: MUSIC_TEST_WEBKIT=1 python3 music/tests/test_music.py
   check:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
@@ -52,7 +35,7 @@ jobs:
           python3 eat/build.py
           python3 eat/build.py --mode standalone
       - name: Check adapter isolation and deterministic builds
-        run: node --test eat/tests/test_worker.mjs draw/tests/test_weights.mjs
+        run: node --test eat/tests/test_worker.mjs
       - name: Install browser test dependencies
         run: |
           python3 -m pip install -r eat/tests/requirements.txt
@@ -64,10 +47,6 @@ jobs:
           python3 eat/tests/test_browser.py
           python3 eat/tests/test_performance.py
           python3 eat/tests/test_experience.py
-          python3 draw/tests/test_draw.py
-          python3 draw/tests/test_shared.py
-          python3 draw/tests/test_polling.py
-          python3 music/tests/test_music.py
       - uses: actions/upload-artifact@v4
         with:
           name: eat-pages-builds

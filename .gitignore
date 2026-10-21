@@ -40,3 +40,11 @@ yarn-error.log*
 log/
 __pycache__/
 *.pyc
+
+# Activity sources remain local after moving the published pages to the draw branch.
+/music/*.mp3
+/music/*.wav
+/music/*.m4a
+/music/*.flac
+/music/originals/
+/music/.cache/

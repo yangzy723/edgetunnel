@@ -1,8 +1,0 @@
-# Music quiz originals stay local; only prepared audio/*.mp3 are deployed.
-/*.mp3
-/*.wav
-/*.m4a
-/*.flac
-/originals/
-/.cache/
-__pycache__/
