@@ -51,6 +51,12 @@ with sync_playwright() as p:
  for width in [320,390,768,1440]:
   page.set_viewport_size({'width':width,'height':844})
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'),width
+  if width>760:
+   assert page.evaluate("""() => {
+    const a=document.querySelector('.lottery').getBoundingClientRect();
+    const b=document.querySelector('#pool').getBoundingClientRect();
+    return Math.abs(a.width-b.width)<1 && Math.abs(a.height-b.height)<1 && Math.abs(a.top-b.top)<1;
+   }"""),width
   page.locator('#add').click();assert page.locator('#editor').is_visible()
   assert page.locator('#editor').bounding_box()['width']<=width
   page.locator('#cancel-editor').click()

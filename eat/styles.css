@@ -58,7 +58,7 @@ h1 span { background: linear-gradient(125deg, var(--red), #e06a3b); -webkit-back
 .doodle { display: grid; place-content: center; width: 92px; height: 92px; border: 1.5px solid var(--ink); border-radius: 50%; background: rgba(255, 254, 248, .85); text-align: center; font-size: 10px; line-height: 1.85; transform: rotate(9deg); box-shadow: 4px 5px 0 var(--yellow); margin-right: 8px; transition: transform .25s cubic-bezier(.2, .8, .2, 1) }
 .doodle b { font-size: 18px; white-space: nowrap }
 .connection-note { padding: 12px 16px; border: 1px solid #e6ce9e; border-radius: 14px; background: rgba(255, 245, 216, .92); color: #74511d; font-size: 12px; margin: 0 0 20px; box-shadow: var(--shadow-soft) }
-.layout { display: grid; grid-template-columns: minmax(0, .96fr) minmax(0, 1.04fr); align-items: start; gap: 24px }
+.layout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 24px }
 .lottery, .pool, .meals-section { border-radius: 28px; border: 1px solid rgba(255, 255, 255, .92); outline: 1px solid rgba(67, 87, 62, .08); box-shadow: var(--shadow-card); min-width: 0; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px) }
 .lottery { position: sticky; top: 20px; background: linear-gradient(150deg, rgba(226, 237, 217, .82), rgba(247, 249, 240, .74)); padding: 24px 26px; overflow: hidden }
 .panel-top { display: flex; justify-content: space-between; align-items: center; gap: 12px }
@@ -240,6 +240,14 @@ html { scroll-behavior: smooth; scroll-padding-top: 24px }
   .chip:enabled:not(.active):hover { background: #e6ebdc }
   .shop:hover, .meal-card:hover { border-color: rgba(93, 118, 82, .35); box-shadow: 0 8px 22px -10px rgba(25, 42, 31, .11) }
   .doodle:hover { transform: rotate(3deg) }
+}
+@media(min-width:761px) {
+  .lottery { position: relative; top: auto; display: flex; flex-direction: column }
+  .lottery > * { flex-shrink: 0 }
+  .lottery .result-actions { margin-bottom: 16px }
+  .lottery .spin-button { margin-top: auto }
+  .pool { display: flex; flex-direction: column }
+  .pool-foot { margin-top: auto; padding-top: 14px }
 }
 @media(max-width:1000px) {
   .intro-aside { gap: 12px }

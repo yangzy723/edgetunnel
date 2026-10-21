@@ -155,6 +155,13 @@ with sync_playwright() as p:
         layout_page.route('**/eat/api/pool', lambda route: route.fulfill(json={'revision': 1, 'shops': [meal]}))
         layout_page.goto('https://eat.test/eat/')
         layout_page.wait_for_function('cloudReady && !syncing')
+        if width > 760:
+            assert layout_page.evaluate('''() => {
+              const left = document.querySelector('.lottery').getBoundingClientRect();
+              const right = document.querySelector('#pool').getBoundingClientRect();
+              return Math.abs(left.width - right.width) < 1 &&
+                Math.abs(left.height - right.height) < 1 && Math.abs(left.top - right.top) < 1;
+            }'''), f'Unequal desktop panels at {width}px'
         layout_page.evaluate('''() => {
           window.geometry = () => {
             const root = document.querySelector('.layout').getBoundingClientRect();
