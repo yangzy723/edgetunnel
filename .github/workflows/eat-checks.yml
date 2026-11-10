@@ -34,7 +34,8 @@ jobs:
         run: MUSIC_TEST_WEBKIT=1 python3 music/tests/test_music.py
   check:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
-    runs-on: ubuntu-latest
+    # Keep the OS compatible with the pinned Playwright version; latest can move ahead.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
