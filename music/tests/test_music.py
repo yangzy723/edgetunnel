@@ -93,11 +93,37 @@ with sync_playwright() as p:
         page.locator('#seek').focus();page.keyboard.press('End')
         page.wait_for_function('audio.currentTime >= audio.duration-.1')
         page.locator('#play').tap()
-        page.wait_for_function('audio.currentTime < 2 && !audio.paused')
+        page.wait_for_function('audio.currentTime > .15 && audio.currentTime < 2 && !audio.paused && !audio.seeking && audio.readyState >= 2')
         page.emulate_media(reduced_motion='reduce')
         assert page.locator('.record').evaluate('el=>getComputedStyle(el).animationName')=='none'
-        page.locator('audio').evaluate('el=>{el.currentTime=el.duration-.05;el.play()}')
-        expect(page.locator('#status')).to_contain_text('听完了')
+        # Wait for a completed seek and play a real tail of the file. A last-frame
+        # seek leaves too little time for WebKit's asynchronous media pipeline.
+        page.locator('audio').evaluate('''el => {
+            window.mediaEvents=[];
+            for(const type of ['seeking','seeked','playing','waiting','stalled','durationchange','pause','ended','error']) {
+                el.addEventListener(type,()=>mediaEvents.push({type,time:el.currentTime,
+                    duration:el.duration,seeking:el.seeking,ended:el.ended}));
+            }
+        }''')
+        try:
+            page.locator('#play').tap()
+            page.wait_for_function('audio.paused && !audio.seeking')
+            page.locator('audio').evaluate('el=>{el.currentTime=Math.max(0,el.duration-2)}')
+            page.wait_for_function('''!audio.seeking && audio.readyState >= 2 &&
+                audio.currentTime >= audio.duration-2.5 && mediaEvents.some(event=>event.type==='seeked')''')
+            page.locator('#play').tap()
+            page.wait_for_function('audio.ended',timeout=10000)
+            expect(page.locator('#status')).to_contain_text('听完了')
+        except Exception as failure:
+            snapshot=page.locator('audio').evaluate('''el=>({
+                currentTime:el.currentTime,duration:el.duration,paused:el.paused,
+                ended:el.ended,seeking:el.seeking,readyState:el.readyState,
+                networkState:el.networkState,error:el.error?.code,
+                status:document.getElementById('status').textContent,events:mediaEvents
+            })''')
+            raise AssertionError(f'{engine} natural playback completion failed: {snapshot}') from failure
+        expect(page.locator('#play-label')).to_have_text('再听一次')
+        expect(page.locator('body')).not_to_have_class('playing')
         page.screenshot(path=str(Path(tempfile.gettempdir())/f'music-{engine}-mobile.png'),full_page=True, animations="disabled")
         # Script failures leave usable native controls; no blank player.
         fallback=browser.new_page(java_script_enabled=False,viewport={'width':320,'height':568})
