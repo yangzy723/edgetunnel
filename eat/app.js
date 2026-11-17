@@ -28,6 +28,7 @@ let state = {
   angle = 0,
   editing = null,
   editingMeal = null,
+  mealDraft = null,
   meals = [],
   mealSaving = false,
   mealsSyncing = false,
@@ -635,6 +636,7 @@ function openMealEditor(meal, presetShop) {
     return
   }
   editingMeal = meal?.id || null;
+  mealDraft = { id: meal?.id || crypto.randomUUID(), eatenAt: meal?.eatenAt || Date.now() };
   const form = $('meal-form');
   form.reset();
   $('meal-name').setCustomValidity('');
@@ -860,22 +862,22 @@ if ($('add-meal')) {
   });
   $('meal-form').onsubmit = async e => {
     e.preventDefault();
+    if (mealSaving) return;
     const name = $('meal-name').value.trim();
     if (!name) {
       $('meal-name').setCustomValidity('请输入店铺或食物名称');
       $('meal-name').reportValidity();
       return
     }
-    const existing = meals.find(m => m.id === editingMeal);
     const body = {
-      id: editingMeal || crypto.randomUUID(),
+      id: mealDraft.id,
       shopId: $('meal-shop-select').value || null,
       name,
       emoji: $('meal-emoji').value,
       dish: $('meal-dish').value.trim(),
       rating: $('meal-rating').value ? Number($('meal-rating').value) : null,
       note: $('meal-note').value.trim(),
-      eatenAt: existing ? existing.eatenAt : Date.now()
+      eatenAt: mealDraft.eatenAt
     };
     mealSaving = true;
     mealsEpoch++;

@@ -21,7 +21,8 @@ const EAT_MEALS_TABLE = `CREATE TABLE IF NOT EXISTS eat_meals (
 )`;
 const EAT_MEALS_INDEX = 'CREATE INDEX IF NOT EXISTS eat_meals_eaten_at ON eat_meals (eaten_at DESC, created_at DESC)';
 const EAT_MEALS_SELECT = 'SELECT id, shop_id, name, emoji, dish, rating, note, eaten_at, created_at FROM eat_meals ORDER BY eaten_at DESC, created_at DESC LIMIT 60';
-const EAT_MEALS_INSERT = 'INSERT INTO eat_meals (id, shop_id, name, emoji, dish, rating, note, eaten_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, shop_id, name, emoji, dish, rating, note, eaten_at, created_at';
+const EAT_MEALS_INSERT = 'INSERT INTO eat_meals (id, shop_id, name, emoji, dish, rating, note, eaten_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING RETURNING id, shop_id, name, emoji, dish, rating, note, eaten_at, created_at';
+const EAT_MEAL_SELECT = 'SELECT id, shop_id, name, emoji, dish, rating, note, eaten_at, created_at FROM eat_meals WHERE id = ?';
 const EAT_MEALS_UPDATE = 'UPDATE eat_meals SET shop_id = ?, name = ?, emoji = ?, dish = ?, rating = ?, note = ?, eaten_at = ? WHERE id = ? RETURNING id, shop_id, name, emoji, dish, rating, note, eaten_at, created_at';
 const EAT_MEALS_DELETE = 'DELETE FROM eat_meals WHERE id = ?';
 const EAT_MEALS_TRIM = 'DELETE FROM eat_meals WHERE id NOT IN (SELECT id FROM eat_meals ORDER BY eaten_at DESC, created_at DESC LIMIT 500)';
@@ -209,13 +210,22 @@ export async function eatMealsAPI(request, env) {
     }
     if (request.method === 'POST') {
       const now = Date.now();
-      const row = await db.prepare(EAT_MEALS_INSERT)
+      let row = await db.prepare(EAT_MEALS_INSERT)
         .bind(payload.id, payload.shopId, payload.name, payload.emoji, payload.dish, payload.rating, payload.note, payload.eatenAt, now)
         .first();
+      if (!row) {
+        row = await db.prepare(EAT_MEAL_SELECT).bind(payload.id).first();
+        if (!row) throw new Error('Meal disappeared during retry');
+        const stored = eatMealRow(row);
+        if (Object.keys(payload).some(key => stored[key] !== payload[key])) {
+          return json({ error: '这条记录已经保存，请在清单中编辑已有记录', code: 'ALREADY_EXISTS', meals: await listMeals() }, 409);
+        }
+        return json({ meal: stored, meals: await listMeals() });
+      }
       const trimStmt = db.prepare(EAT_MEALS_TRIM);
       if (typeof trimStmt.run === 'function') await trimStmt.run();
       else if (typeof trimStmt.first === 'function') await trimStmt.first();
-      return json({ meal: row ? eatMealRow(row) : payload, meals: await listMeals() });
+      return json({ meal: eatMealRow(row), meals: await listMeals() });
     }
     if (request.method === 'PUT') {
       const row = await db.prepare(EAT_MEALS_UPDATE)

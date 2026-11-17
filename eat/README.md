@@ -2,7 +2,7 @@
 
 手机、电脑共用的“今天吃什么”转盘。所有访问者都能添加、编辑、删除店铺，无需登录。
 
-`main` 只发布原有梯子管理服务与 `/eat`。抽奖 `/draw`、听歌识曲 `/music` 及其短链接完整保存在 `draw` 分支，不随主分支构建发布。切换到 `draw` 分支后可使用该分支原有构建命令部署活动版本；不要把整个活动分支合回主分支。现有云端活动数据不删除。
+`main` 同时发布原有梯子管理服务、`/eat`、[抽奖 `/draw`](../draw/README.md) 和 [听歌识曲 `/music/`](../music/README.md)。`/Test-A` 至 `/Test-D` 跳转到对应音乐题目。`draw` 分支保留拆分时期的活动版本；后续维护统一在 `main` 进行。
 
 ## 仓库分工：上游保持原样，Eat 独立维护
 
@@ -22,7 +22,7 @@ eat/
   tests/                  构建、路由、数据库和浏览器测试
 ```
 
-**页面代码维护在 `eat/`，不要粘进根目录 `_worker.js`。** 构建会把上游文件逐字节复制到产物中，再用 ES module 导入组合。没有字符串替换上游函数，也不依赖上游的变量名。CSS/JS 在源码中分离，发布时嵌入页面，避免与上游资源路径冲突。
+**页面代码维护在 `eat/`、`draw/` 和 `music/`，不要粘进根目录 `_worker.js`。** 构建会把上游文件逐字节复制到产物中，再用 ES module 导入组合。没有字符串替换上游函数，也不依赖上游的变量名。Eat/Draw 的 CSS/JS 在源码中分离，发布时嵌入页面；音乐资源作为带内容哈希的静态文件发布。
 
 `dist/` 已被上游 `.gitignore` 忽略，不提交生成代码。这次新增的工作流为 `.github/workflows/eat-checks.yml`，不会改写上游同步规则。
 
@@ -50,17 +50,17 @@ python3 eat/build.py
 
 **推送源码不等于完成配置。首次上线必须修改上面的构建命令和输出目录，配置 D1，再重新部署。若仍发布仓库根目录，只会部署原上游服务，`/eat` 不会接入。** 不要再按旧版说明手工上传根目录 `_worker.js` 来部署 Eat。
 
-组合入口只处理 `/eat`、`/eat/` 的普通 GET/HEAD 以及 `/eat/api/pool`、`/eat/api/meals` 的 API 请求。其他请求（包括 WebSocket 升级、原 POST 通道和 `/admin`）把原 Request、env、ctx 原样交给上游；上游其他事件处理器和命名导出也保留。
+组合入口处理 `/eat`、`/draw` 的页面与各自 API，以及四个音乐短链接。`/music/` 的页面和音频、`/draw/images/` 的图片由 Pages 静态托管。其他请求（包括 WebSocket 升级、原 POST 通道和 `/admin`）把原 Request、env、ctx 原样交给上游；上游其他事件处理器和命名导出也保留。
 
-## 独立部署：Eat 可脱离这个 fork
+## 独立部署：页面可脱离这个 fork
 
 ```sh
 python3 eat/build.py --mode standalone
 ```
 
-把 `dist/standalone` 作为另一个 Pages 项目的输出目录，绑定 `EAT_DB` 即可。根路径 `/` 会跳转到 `/eat`；产物不包含上游代码或代理功能。
+把 `dist/standalone` 作为另一个 Pages 项目的输出目录，绑定 `EAT_DB` 并配置 `DRAW_ADMIN_PASSWORD` 即可启用全部页面。根路径 `/` 会跳转到 `/eat`；产物不包含上游代码或代理功能。
 
-也可以把整个 `eat/` 目录复制到另一个仓库，执行该目录里的 `build.py --mode standalone`。构建只使用 Eat 自己的源码，无需根目录的 `_worker.js`。若复制后仍保留 `eat/` 子目录布局，命令和输出目录完全相同。
+也可以将 `eat/`、`draw/`、`music/` 一起复制到另一个仓库，保持目录布局，执行 `python3 eat/build.py --mode standalone`；此模式无需根目录的 `_worker.js`。
 
 两种部署想共用菜单就绑定同一个 D1 数据库，想独立菜单就各自绑定不同数据库。独立部署会有独立的网站地址；若仍要使用现有域名的 `/eat`，采用上面的组合部署最直接。
 
@@ -69,7 +69,8 @@ python3 eat/build.py --mode standalone
 1. 控制台 → 存储和数据库 → D1 SQL Database，创建 `eat-shared`（名称可自定）。
 2. 在数据库 SQL 控制台执行 [schema.sql](schema.sql)。可重复执行，不清空原数据。
 3. 当前 Pages 项目 → 设置 → 绑定 → 添加 D1 数据库，变量名称填 **`EAT_DB`**，选择刚创建的数据库，应用到生产环境。
-4. 重新部署，打开 `/eat`，顶部应显示“云端共用 · 已同步”。添加一家店，再用另一台设备验证。
+4. 要管理抽奖礼品，在 Pages 的“变量和密钥”中设置 `DRAW_ADMIN_PASSWORD`（类型选密钥），参见 [Draw 配置说明](../draw/README.md)。
+5. 重新部署，打开 `/eat`，顶部应显示“云端共用 · 已同步”。添加一家店，再用另一台设备验证。
 
 预览环境建议绑定另一份测试数据库，以免预览操作改动正式菜单。数据库未绑定或未建表时会提示服务未连接，点击“同步”可查看错误并重试。
 
@@ -109,6 +110,7 @@ git push origin main
 - 正在编辑、确认或抽奖时暂缓拉取。多人同时保存用原子版本检查避免覆盖，过期写入返回 409，保留表单供用户确认后重试。
 - 已发出的后台请求如果在编辑或抽奖期间返回，会暂缓应用；保存优先取消后台读取，避免旧响应覆盖新内容。
 - 云端保存失败不会显示成功；本地缓存只用于离线查看，不能冒充已共享。
+- 新增美食记录的草稿使用稳定 ID；响应丢失后重试返回原记录，不重复插入。
 - 老版本机菜单不会自动覆盖云端，可通过“共享本机菜单”确认迁移。
 - 支持 JSON 导入导出；导入替换所有人的菜单，记录只导入本机。
 - API 为公开可写接口，最多 100 家店、100000 字节请求体。使用参数化 SQL 和主库读取；同源检查不是身份认证。
@@ -123,7 +125,7 @@ git push origin main
 
 通过“添加店铺”选择美味标记，可添加稀饭、西餐等店铺。旧菜单、JSON 备份和 D1 表结构继续兼容，无需迁移数据库。
 
-转盘使用 transform 动画，开始前才临时启用合成层提示，结束后释放；配合拨针、中心徽章摇摆、结果弹跳和中奖卡片高亮。手机彩纸减至 16 片，桌面为 28 片；系统设置“减少动态效果”时关闭装饰动画并快速揭晓。列表保留真实卡片高度，不压缩卡片或用跳过内容渲染的方式估算高度，避免滚动位置漂移；弹窗背景使用纯色遮罩。
+转盘使用 transform 动画，开始前才临时启用合成层提示，结束后释放；配合拨针、中心徽章摇摆、结果弹跳和中奖卡片高亮。手机彩纸减至 16 片，桌面为 28 片；系统设置“减少动态效果”时关闭装饰动画并快速揭晓。列表保留真实卡片高度，不压缩卡片或用跳过内容渲染的方式估算高度，避免滚动位置漂移；毛玻璃效果限制在主面板，手机端减少大面积模糊绘制。
 
 ## 本地检查
 
@@ -140,6 +142,10 @@ python3 eat/tests/test_cloud.py
 python3 eat/tests/test_browser.py
 python3 eat/tests/test_performance.py
 python3 eat/tests/test_experience.py
+python3 draw/tests/test_draw.py
+python3 draw/tests/test_shared.py
+python3 draw/tests/test_polling.py
+python3 music/tests/test_music.py
 ```
 
 浏览器测试使用独立上下文，优先使用 `CHROME_BIN` 指定的浏览器，否则使用本机 Chrome 或 Playwright Chromium，不读取个人浏览器资料。数据库测试运行真实 API JavaScript，通过 SQLite 模拟 D1；不能代替 Cloudflare 上线后的验证。

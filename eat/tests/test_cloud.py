@@ -126,6 +126,30 @@ with sync_playwright() as p:
  desktop.locator('#delete-meal').click()
  desktop.locator('#confirm-ok').click()
  expect(desktop.locator('.meal-card')).to_have_count(0)
+ # A committed insert with a lost response must be safe to retry from the same draft.
+ attempts=[]
+ def lose_first_meal_response(request_route):
+  if request_route.request.method=='POST' and not attempts:
+   payload=json.loads(request_route.request.post_data)
+   attempts.append(payload)
+   assert meals_api('POST',payload)['status']==200
+   request_route.fulfill(status=503,json={'error':'响应丢失，请重试'})
+  else:
+   meals_route(request_route)
+ a.unroute('**/eat/api/meals*')
+ a.route('**/eat/api/meals*',lose_first_meal_response)
+ phone.locator('#add-meal').click()
+ phone.locator('#meal-name').fill('断线后只记一次')
+ phone.locator('#save-meal-btn').click()
+ expect(phone.locator('#meal-editor-message')).to_contain_text('响应丢失')
+ expect(phone.locator('#meal-editor')).to_be_visible()
+ phone.locator('#save-meal-btn').click()
+ expect(phone.locator('#meal-editor')).not_to_be_visible()
+ assert len(meals_api()['data']['meals'])==1
+ assert meals_api('POST',dict(attempts[0],name='不能覆盖已有记录'))['status']==409
+ assert meals_api()['data']['meals'][0]['name']=='断线后只记一次'
+ meals_api('DELETE',url_suffix='?id='+attempts[0]['id'])
+ a.unroute('**/eat/api/meals*');a.route('**/eat/api/meals*',meals_route)
  # Editing protects a draft from background refresh; stale revision must conflict.
  desktop.locator('.shop .icon-btn').first.click();desktop.locator('#shop-name').fill('电脑未保存草稿')
  phone.locator('.shop .icon-btn').first.click();phone.locator('#shop-name').fill('手机已经修改');phone.locator('#shop-form button[type=submit]').click();expect(phone.locator('#editor')).not_to_be_visible()
