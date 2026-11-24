@@ -1,4 +1,4 @@
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, expect
 import json, subprocess
 from pathlib import Path
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
@@ -31,6 +31,7 @@ with sync_playwright() as p:
  assert '/eat/styles.css' not in html and '<script src="/eat/app.js">' not in html
  page.route('**/eat/',lambda route:route.fulfill(content_type='text/html',body=html))
  page.route('**/eat/api/pool',cloud)
+ page.route('**/eat/api/meals*',lambda route:route.fulfill(json={'meals':[]}))
  page.goto(url)
  page.wait_for_function('cloudReady')
  with page.expect_download() as download:page.locator('#export').click()
@@ -40,10 +41,12 @@ with sync_playwright() as p:
  page.locator('#confirm-ok').click();page.wait_for_function('!saving');assert page.locator('.shop').count()==6
  page.reload();page.wait_for_function('cloudReady');assert page.locator('.shop').count()==6
  page.locator('#import-file').set_input_files({'name':'bad.json','mimeType':'application/json','buffer':b'{bad'})
- assert page.locator('#toast').inner_text().startswith('无法导入')
+ # File.text() completes asynchronously after set_input_files() returns.
+ expect(page.locator('#toast')).to_contain_text('无法导入：')
+ expect(page.locator('#confirm-dialog')).not_to_be_visible()
  assert page.locator('.shop').count()==6
  # A real multi-entry spin, check actual wheel angle against selected sector.
- page.locator('#spin').click();page.wait_for_timeout(4900)
+ page.locator('#spin').click();page.wait_for_function('!spinning && state.history.length===1',timeout=10000)
  assert page.evaluate("(()=>{const items=eligible(),winner=state.history[0];const i=items.findIndex(s=>s.name===winner.name);return Math.abs(((angle+(i+.5)*360/items.length)%360))<0.01})()")
  page.locator('#clear-history').click();page.locator('#confirm-ok').click()
  page.reload();page.wait_for_function('cloudReady');page.wait_for_timeout(300)
