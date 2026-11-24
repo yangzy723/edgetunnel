@@ -6,6 +6,60 @@ from functools import partial
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from threading import Thread
 from playwright.sync_api import sync_playwright, expect
+
+# Media seeks and play promises complete independently, especially on WebKit.
+# Capture a bounded trace before the first interaction on each page.
+MEDIA_TRACE = """(() => {
+    window.mediaEvents=[];
+    window.mediaSequence=0;
+    for (const type of ['loadedmetadata','durationchange','play','playing','pause',
+                        'seeking','seeked','waiting','stalled','ended','error']) {
+        document.addEventListener(type,event=>{
+            const a=event.target;
+            if (!(a instanceof HTMLMediaElement)) return;
+            mediaEvents.push({sequence:++window.mediaSequence,type,at:performance.now(),
+                currentTime:a.currentTime,duration:a.duration,paused:a.paused,
+                ended:a.ended,seeking:a.seeking,readyState:a.readyState});
+            if(mediaEvents.length>80) mediaEvents.shift();
+        },true);
+    }
+})()"""
+
+
+def media_snapshot(page):
+    return page.locator('audio').evaluate("""a=>({
+        currentTime:a.currentTime,duration:a.duration,paused:a.paused,
+        ended:a.ended,seeking:a.seeking,readyState:a.readyState,
+        networkState:a.networkState,error:a.error?.code,
+        status:document.getElementById('status').textContent,
+        events:window.mediaEvents
+    })""")
+
+
+def wait_for_media(page, condition, step, checkpoint=0, timeout=10000):
+    try:
+        page.wait_for_function("""checkpoint=>{
+            const a=document.getElementById('audio');
+            const events=window.mediaEvents.filter(event=>event.sequence>checkpoint);
+            return a && ("""+condition+""");
+        }""",arg=checkpoint,timeout=timeout)
+    except Exception as failure:
+        raise AssertionError(f'{step} failed: {media_snapshot(page)}') from failure
+
+
+def wait_for_playback(page, step):
+    wait_for_media(page, '!a.paused && !a.ended && !a.seeking && a.readyState>=2 && a.currentTime>.15', step)
+
+
+def wait_for_replay(page, step, checkpoint):
+    # The real seeked event records the reset even if CI pauses Python long
+    # enough for playback to advance before its next assertion reaches the page.
+    wait_for_media(page, """!a.paused && !a.ended && !a.seeking && a.readyState>=2 &&
+        a.currentTime>.15 && (a.currentTime<2 ||
+        events.filter(event=>event.type==='seeked').slice(-1)
+            .some(event=>event.currentTime<2))""",step,checkpoint)
+
+
 root=Path(__file__).resolve().parents[2]
 subprocess.run(['python3',str(root/'eat/build.py'),'--mode','standalone'],check=True)
 class AssetHandler(SimpleHTTPRequestHandler):
@@ -36,6 +90,7 @@ with sync_playwright() as p:
         browser=getattr(p,engine).launch(executable_path=os.environ.get('CHROME_BIN') if engine=='chromium' else None,headless=True)
         page=browser.new_page(viewport={'width':390,'height':844},is_mobile=True,has_touch=True)
         page.set_default_timeout(10000)
+        page.add_init_script(MEDIA_TRACE)
         errors=[];audio_requests=[]
         page.on('pageerror',lambda error:errors.append(str(error)))
         page.on('request',lambda request:audio_requests.append(request.url) if '.mp3' in request.url else None)
@@ -58,20 +113,24 @@ with sync_playwright() as p:
             assert page.locator('audio').evaluate('el=>el.paused')
             expect(page.locator('#seek')).to_be_disabled()
             page.locator('#play').tap()
-            page.wait_for_function('document.querySelector("audio").currentTime > .15')
+            wait_for_playback(page,f'{engine} question {letter}: play')
             assert page.locator('audio').evaluate('el=>Number.isFinite(el.duration) && el.duration>0')
             expect(page.locator('body')).to_have_class('playing')
             expect(page.locator('#play-label')).to_have_text('暂停播放')
             page.locator('#play').tap()
             expect(page.locator('body')).not_to_have_class('playing')
-            assert page.locator('audio').evaluate('el=>el.paused')
+            wait_for_media(page,'a.paused',f'{engine} question {letter}: pause')
             # Touch seeking is a real input event on the custom, full-width control.
             box=page.locator('#seek').bounding_box()
             page.touchscreen.tap(box['x']+box['width']*.6,box['y']+box['height']/2)
-            page.wait_for_function('audio.currentTime > audio.duration*.4')
+            wait_for_media(page,'a.paused && !a.seeking && a.readyState>=2 && a.currentTime>a.duration*.4',
+                           f'{engine} question {letter}: touch seek')
+            checkpoint=page.evaluate('window.mediaSequence')
             page.locator('#replay').tap()
-            assert page.locator('audio').evaluate('el=>el.currentTime<2')
+            wait_for_replay(page,f'{engine} question {letter}: replay',checkpoint)
+            expect(page.locator('#play-label')).to_have_text('暂停播放')
             page.locator('#play').tap()
+            wait_for_media(page,'a.paused',f'{engine} question {letter}: pause replay')
             for width,height in [(320,568),(375,667),(390,844),(430,932),(844,390),(768,1024)]:
                 page.set_viewport_size({'width':width,'height':height})
                 assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'),(engine,letter,width)
@@ -85,43 +144,34 @@ with sync_playwright() as p:
         expect(page.locator('#error')).to_be_visible()
         page.unroute('**/*.mp3*')
         page.locator('#retry').tap()
-        page.wait_for_function('document.querySelector("audio").currentTime > .15')
+        wait_for_playback(page,f'{engine}: retry playback')
         expect(page.locator('#error')).not_to_be_visible()
+        # Also exercise replay while a new seek is still settling.
+        page.locator('audio').evaluate('a=>{a.currentTime=a.duration*.75}')
+        checkpoint=page.evaluate('window.mediaSequence')
+        page.locator('#replay').tap()
+        wait_for_replay(page,f'{engine}: rapid seek then replay',checkpoint)
         # Pause, resume and seek with a keyboard as well as touch.
         page.locator('#play').focus();page.keyboard.press('Space')
-        assert page.locator('audio').evaluate('el=>el.paused')
+        wait_for_media(page,'a.paused',f'{engine}: keyboard pause')
         page.locator('#seek').focus();page.keyboard.press('End')
-        page.wait_for_function('audio.currentTime >= audio.duration-.1')
+        # At the exact end there may be no current sample, so readyState>=2 is
+        # required for playback, not for this completed end-position seek.
+        wait_for_media(page,'!a.seeking && (a.ended || a.currentTime>=a.duration-.1)',
+                       f'{engine}: keyboard seek to end')
+        checkpoint=page.evaluate('window.mediaSequence')
         page.locator('#play').tap()
-        page.wait_for_function('audio.currentTime > .15 && audio.currentTime < 2 && !audio.paused && !audio.seeking && audio.readyState >= 2')
+        wait_for_replay(page,f'{engine}: replay from end',checkpoint)
         page.emulate_media(reduced_motion='reduce')
         assert page.locator('.record').evaluate('el=>getComputedStyle(el).animationName')=='none'
-        # Wait for a completed seek and play a real tail of the file. A last-frame
-        # seek leaves too little time for WebKit's asynchronous media pipeline.
-        page.locator('audio').evaluate('''el => {
-            window.mediaEvents=[];
-            for(const type of ['seeking','seeked','playing','waiting','stalled','durationchange','pause','ended','error']) {
-                el.addEventListener(type,()=>mediaEvents.push({type,time:el.currentTime,
-                    duration:el.duration,seeking:el.seeking,ended:el.ended}));
-            }
-        }''')
-        try:
-            page.locator('#play').tap()
-            page.wait_for_function('audio.paused && !audio.seeking')
-            page.locator('audio').evaluate('el=>{el.currentTime=Math.max(0,el.duration-2)}')
-            page.wait_for_function('''!audio.seeking && audio.readyState >= 2 &&
-                audio.currentTime >= audio.duration-2.5 && mediaEvents.some(event=>event.type==='seeked')''')
-            page.locator('#play').tap()
-            page.wait_for_function('audio.ended',timeout=10000)
-            expect(page.locator('#status')).to_contain_text('听完了')
-        except Exception as failure:
-            snapshot=page.locator('audio').evaluate('''el=>({
-                currentTime:el.currentTime,duration:el.duration,paused:el.paused,
-                ended:el.ended,seeking:el.seeking,readyState:el.readyState,
-                networkState:el.networkState,error:el.error?.code,
-                status:document.getElementById('status').textContent,events:mediaEvents
-            })''')
-            raise AssertionError(f'{engine} natural playback completion failed: {snapshot}') from failure
+        # Test natural completion independently of the seek/retry sequence. Play
+        # the whole short clip: an MP3 tail seek is not uninterrupted playback.
+        page.goto(f'{base}/music/Test-A/?natural-completion')
+        page.locator('#play').tap()
+        wait_for_playback(page,f'{engine}: uninterrupted playback')
+        completion_timeout=page.locator('audio').evaluate('a=>Math.ceil(a.duration*1000)+10000')
+        wait_for_media(page,'a.ended',f'{engine}: natural completion',timeout=completion_timeout)
+        expect(page.locator('#status')).to_contain_text('听完了')
         expect(page.locator('#play-label')).to_have_text('再听一次')
         expect(page.locator('body')).not_to_have_class('playing')
         page.screenshot(path=str(Path(tempfile.gettempdir())/f'music-{engine}-mobile.png'),full_page=True, animations="disabled")
@@ -132,9 +182,10 @@ with sync_playwright() as p:
         expect(fallback.locator('#controls')).not_to_be_visible()
         fallback.close()
         desktop=browser.new_page(viewport={'width':1440,'height':1000})
+        desktop.add_init_script(MEDIA_TRACE)
         desktop.goto(f'{base}/music/Test-B/')
         desktop.locator('#play').click()
-        desktop.wait_for_function('audio.currentTime>.15')
+        wait_for_playback(desktop,f'{engine}: desktop playback')
         assert desktop.evaluate('document.documentElement.scrollWidth<=innerWidth')
         desktop.screenshot(path=str(Path(tempfile.gettempdir())/f'music-{engine}-desktop.png'),full_page=True, animations="disabled")
         assert not errors,errors
