@@ -12,8 +12,9 @@ from playwright.sync_api import sync_playwright, expect
 MEDIA_TRACE = """(() => {
     window.mediaEvents=[];
     window.mediaSequence=0;
-    for (const type of ['loadedmetadata','durationchange','play','playing','pause',
-                        'seeking','seeked','waiting','stalled','ended','error']) {
+    for (const type of ['loadstart','emptied','loadedmetadata','durationchange',
+                        'play','playing','pause','timeupdate','seeking','seeked',
+                        'waiting','stalled','ended','error']) {
         document.addEventListener(type,event=>{
             const a=event.target;
             if (!(a instanceof HTMLMediaElement)) return;
@@ -52,12 +53,15 @@ def wait_for_playback(page, step):
 
 
 def wait_for_replay(page, step, checkpoint):
-    # The real seeked event records the reset even if CI pauses Python long
-    # enough for playback to advance before its next assertion reaches the page.
+    # Require real progress near the beginning, not an optimistic zero while a
+    # seek is pending. Keep event evidence if CI delays the next Python check,
+    # but reject a later completed seek that returns to the old position.
     wait_for_media(page, """!a.paused && !a.ended && !a.seeking && a.readyState>=2 &&
         a.currentTime>.15 && (a.currentTime<2 ||
-        events.filter(event=>event.type==='seeked').slice(-1)
-            .some(event=>event.currentTime<2))""",step,checkpoint)
+        events.some(event=>event.type==='timeupdate' && event.currentTime>.15 &&
+            event.currentTime<2 && !event.paused && !event.seeking && event.readyState>=2 &&
+            !events.some(later=>later.sequence>event.sequence &&
+                ['seeked','loadedmetadata'].includes(later.type) && later.currentTime>=2)))""",step,checkpoint)
 
 
 root=Path(__file__).resolve().parents[2]
@@ -151,6 +155,19 @@ with sync_playwright() as p:
         checkpoint=page.evaluate('window.mediaSequence')
         page.locator('#replay').tap()
         wait_for_replay(page,f'{engine}: rapid seek then replay',checkpoint)
+        # Multiple replay requests may abort old play promises. Cancelling the
+        # latest request must leave it paused; preload=none may defer metadata.
+        page.evaluate("""()=>{
+            document.getElementById('replay').click();
+            document.getElementById('replay').click();
+            document.getElementById('play').click();
+        }""")
+        wait_for_media(page,'a.paused && !a.seeking',f'{engine}: cancel pending replay')
+        expect(page.locator('#error')).not_to_be_visible()
+        expect(page.locator('body')).not_to_have_class(re.compile(r'.*\b(?:playing|loading)\b.*'))
+        expect(page.locator('#status')).to_contain_text('已暂停')
+        page.locator('#play').tap()
+        wait_for_playback(page,f'{engine}: resume after cancelled replay')
         # Pause, resume and seek with a keyboard as well as touch.
         page.locator('#play').focus();page.keyboard.press('Space')
         wait_for_media(page,'a.paused',f'{engine}: keyboard pause')

@@ -27,10 +27,14 @@ if(audio) {
   function failed(){pending=false;buffering=false;audio.pause();state();error.hidden=false;status.textContent='暂时播放不了，请重试。';}
   async function start({restart=false,reload=false}={}) {
     const id=++requestId;
+    const reset=restart||reload||atEnd();
     error.hidden=true;
-    if(reload) audio.load();
-    if((restart||atEnd())&&audio.readyState>0) audio.currentTime=0;
-    pending=true;buffering=audio.readyState<3;state();status.textContent='正在准备音乐…';
+    pending=true;buffering=reset||audio.readyState<3;
+    // WebKit can finish a zero seek at the previous position when play() races
+    // the seek. A fresh load cancels that pipeline and starts at the beginning.
+    // Keep play() in this user gesture, including on iOS.
+    if(reset) audio.load();
+    progress();state();status.textContent='正在准备音乐…';
     try { await audio.play(); if(id===requestId){pending=false;state();} }
     catch(e) { if(id!==requestId)return;pending=false;if(e.name==='AbortError')state();else failed(); }
   }
@@ -45,10 +49,10 @@ if(audio) {
     try {audio.currentTime=Number(seek.value)/1000*audio.duration;progress();state();}
     catch(_){status.textContent='进度暂未加载好，请稍后再试。';}
   });
-  audio.addEventListener('playing',()=>{pending=false;buffering=false;error.hidden=true;state();status.textContent='正在播放，歌名有线索了吗？';});
-  audio.addEventListener('pause',()=>{buffering=false;state();if(!audio.ended&&!error.hidden)return;if(!audio.ended)status.textContent='已暂停，继续听听吧。';});
-  audio.addEventListener('waiting',()=>{buffering=true;state();status.textContent='音乐加载中…';});
-  audio.addEventListener('ended',()=>{pending=false;buffering=false;state();progress();status.textContent='听完了，猜到是哪首歌了吗？';});
+  audio.addEventListener('playing',()=>{if(audio.paused||audio.ended)return;pending=false;buffering=false;error.hidden=true;state();status.textContent='正在播放，歌名有线索了吗？';});
+  audio.addEventListener('pause',()=>{if(pending){state();return;}buffering=false;state();if(!audio.ended&&!error.hidden)return;if(!audio.ended)status.textContent='已暂停，继续听听吧。';});
+  audio.addEventListener('waiting',()=>{if(audio.paused&&!pending)return;buffering=true;state();status.textContent='音乐加载中…';});
+  audio.addEventListener('ended',()=>{if(!audio.ended)return;pending=false;buffering=false;state();progress();status.textContent='听完了，猜到是哪首歌了吗？';});
   audio.addEventListener('error',failed);
   for(const event of ['loadedmetadata','durationchange','timeupdate','seeked','emptied']) audio.addEventListener(event,progress);
   document.addEventListener('visibilitychange',state);
