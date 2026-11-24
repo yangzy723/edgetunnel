@@ -1,4 +1,3 @@
-const DEFAULT_WEIGHTS = {"book": 30, "tissue": 24, "bag": 16, "stand": 20, "cup": 20, "tote": 30};
 export const DRAW_DEFAULTS = {activityEnabled:true, showQuantity:true, gifts:[
   {id:'book',weight:30,name:'A5 软皮计划本',note:'梦瑾 · 记录每一份灵感',icon:'book',quantity:1,unit:'本',enabled:true},
   {id:'tissue',weight:24,name:'维达联名抽纸',note:'线条小狗 · 柔软好心情',icon:'tissue',quantity:2,unit:'包',enabled:true},
@@ -7,6 +6,7 @@ export const DRAW_DEFAULTS = {activityEnabled:true, showQuantity:true, gifts:[
   {id:'cup',weight:20,name:'竹节吸管随行杯',note:'把温柔 · 装进日常',icon:'cup',quantity:1,unit:'个',enabled:true},
   {id:'tote',weight:30,name:'便携折叠环保袋',note:'轻装出门 · 满载美好',icon:'tote',quantity:1,unit:'个',enabled:true}
 ]};
+const DEFAULT_WEIGHTS = new Map(DRAW_DEFAULTS.gifts.map(gift => [gift.id,gift.weight]));
 
 export function validateDrawConfig(value) {
   if (!value || typeof value.activityEnabled !== 'boolean' || typeof value.showQuantity !== 'boolean' || !Array.isArray(value.gifts) || value.gifts.length > 12) throw Error('礼品设置格式有误');
@@ -18,7 +18,7 @@ export function validateDrawConfig(value) {
         !Number.isInteger(gift.quantity) || gift.quantity < 1 || gift.quantity > 99 ||
         typeof gift.unit !== 'string' || !gift.unit.trim() || gift.unit.length > 6 || typeof gift.enabled !== 'boolean') throw Error('请检查礼品名称、每份数量与单位');
     // Existing D1 configurations gain weights without replacing other edits.
-    const weight = gift.weight === undefined ? (Object.hasOwn(DEFAULT_WEIGHTS,gift.id) ? DEFAULT_WEIGHTS[gift.id] : 20) : gift.weight;
+    const weight = gift.weight === undefined ? (DEFAULT_WEIGHTS.get(gift.id) ?? 20) : gift.weight;
     if(!Number.isInteger(weight) || weight < 1 || weight > 9999) throw Error('抽取权重应为 1–9999 的整数');
     ids.add(gift.id);
     return {id:gift.id,weight,name:gift.name.trim(),note:gift.note.trim(),icon:gift.icon,quantity:gift.quantity,unit:gift.unit.trim(),enabled:gift.enabled};

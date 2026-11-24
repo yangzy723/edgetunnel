@@ -63,7 +63,6 @@ h1 span { background: linear-gradient(125deg, var(--red), #e06a3b); -webkit-back
 .lottery { position: sticky; top: 20px; background: linear-gradient(150deg, rgba(226, 237, 217, .82), rgba(247, 249, 240, .74)); padding: 24px 26px; overflow: hidden }
 .panel-title { margin: 0; font-size: 21px; line-height: 1.35; letter-spacing: -.3px }
 .panel-top { display: flex; justify-content: space-between; align-items: center; gap: 12px }
-.tiny { font-size: 11px; letter-spacing: 1px; color: #5b6b52; font-weight: 650 }
 .live-count { padding: 5px 11px; border: 1px solid rgba(116, 135, 102, .24); border-radius: 20px; background: rgba(255, 255, 255, .82); color: #435738; font-size: 11px; font-weight: 600; white-space: nowrap }
 .wheel-context { margin: 14px 0 0; text-align: center; color: #5f7055; font-size: 11px; min-height: 17px }
 .wheel-area { position: relative; width: min(100%, 316px); aspect-ratio: 1; margin: 19px auto 24px }
@@ -79,7 +78,7 @@ h1 span { background: linear-gradient(125deg, var(--red), #e06a3b); -webkit-back
 .result h2 { margin: 6px 0; font-size: 24px; font-weight: 800; line-height: 1.35; overflow-wrap: anywhere }
 .result p { margin: 0; color: #5f7055; font-size: 11px; line-height: 1.7; overflow-wrap: anywhere }
 .result.revealed { border-style: solid; border-color: #d4b468; background: linear-gradient(180deg, #fffdf4, #fff6dd); box-shadow: 0 10px 24px -10px rgba(185, 142, 48, .25) }
-.result-actions { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 6px; min-height: 32px }
+.result-actions { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 6px; min-height: 44px }
 /* Keep the action row's space without exposing unavailable buttons. */
 .result-actions[hidden] { display: flex !important; visibility: hidden }
 .action-pill { padding: 6px 11px; border-radius: 999px; border: 1px solid rgba(93, 108, 90, .22); background: rgba(255, 255, 255, .75); color: #3d5036; font-weight: 600; font-size: 11px; transition: transform .15s, background .15s, border-color .15s }
@@ -218,7 +217,6 @@ html { scroll-behavior: smooth; scroll-padding-top: 24px }
 .meal-time { font-variant-numeric: tabular-nums }
 .icon-btn, .toggle, .text-btn, .chip, .soft-btn { min-height: 44px }
 .icon-btn { min-width: 44px }
-.result-actions { min-height: 44px }
 .result-actions .action-pill { min-height: 36px }
 @keyframes surface-appear { from { opacity: 0 } to { opacity: 1 } }
 @keyframes intro-appear { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
@@ -273,7 +271,6 @@ html { scroll-behavior: smooth; scroll-padding-top: 24px }
   .section-nav a > span { font-size: 15px }
   .lottery, .pool, .meals-section { backdrop-filter: none; -webkit-backdrop-filter: none }
   .pool, .meals-section { background: rgba(255,255,252,.9) }
-  .meals-head { flex-wrap: wrap }
   .meals-sub { max-width: 30em; line-height: 1.8 }
   .intro { margin-bottom: 22px; gap: 12px }
   .eyebrow { font-size: 9px; letter-spacing: 1px }
@@ -289,7 +286,7 @@ html { scroll-behavior: smooth; scroll-padding-top: 24px }
   .wheel-area { width: min(100%,244px); margin: 16px auto 20px }
   .wheel-context { margin-top: 10px; font-size: 10px }
   .wheel-center { width: 65px; height: 65px; font-size: 15px }
-  .result { height: 120px; padding: 12px 10px }
+  .result { padding: 12px 10px }
   .result h2 { font-size: 22px }
   .panel-title { font-size: 18px }
   .result-actions { gap: 6px }
@@ -308,10 +305,8 @@ html { scroll-behavior: smooth; scroll-padding-top: 24px }
   .flavor-picker { gap: 4px; font-size: 10px }
   .flavor-picker select { font-size: 11px }
   .cards { max-height: 420px }
-  .shop { padding: 11px 9px; gap: 8px }
   .food-icon { flex-basis: 38px; width: 38px; height: 42px; font-size: 21px }
   .shop-name { font-size: 13px }
-  .shop-title { flex-wrap: wrap }
   .shop-note { font-size: 10px }
   .shop .icon-btn { min-width: 36px; padding: 5px }
   .meals-grid { grid-template-columns: 1fr }

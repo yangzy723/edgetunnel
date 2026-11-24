@@ -171,6 +171,32 @@ test('pool revalidation returns no menu body and new food icons survive saves', 
   assert.equal(changed.headers.get('ETag'), '"eat-pool-4"');
 });
 
+test('both Eat APIs reject invalid and oversized bodies before accessing D1', async t => {
+  const { modules } = await fixture(t, 'standalone');
+  const { eatPoolAPI, eatMealsAPI } = await import(pathToFileURL(join(modules, 'api.js')));
+  const env = { EAT_DB: { withSession() { assert.fail('Rejected input must not access D1'); } } };
+  for (const [path, api, method, limit] of [
+    ['pool', eatPoolAPI, 'PUT', 100000],
+    ['meals', eatMealsAPI, 'POST', 24000],
+    ['meals', eatMealsAPI, 'PUT', 24000],
+  ]) {
+    for (const [body, extra, status] of [
+      [undefined, {}, 400],
+      ['{', {}, 400],
+      [' '.repeat(limit + 1), {}, 413],
+      ['{}', { 'Content-Length': String(limit + 1) }, 413],
+    ]) {
+      const request = new Request(`https://example.test/eat/api/${path}`, {
+        method, body, headers: { 'Content-Type': 'application/json', ...extra },
+      });
+      const response = await api(request, env);
+      assert.equal(response.status, status, `${method} ${path}: body limit ${limit}`);
+      assert.equal(response.headers.get('Cache-Control'), 'no-store');
+      assert.equal(typeof (await response.json()).error, 'string');
+    }
+  }
+});
+
 test('HTML revalidation skips unchanged content and sends the current page for stale tags', async t => {
   const { modules } = await fixture(t, 'standalone');
   const { default: worker } = await import(pathToFileURL(join(modules, 'index.js')));

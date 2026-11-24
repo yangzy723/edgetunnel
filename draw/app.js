@@ -212,9 +212,9 @@ async function draw() {
     else { cloudReady=false; cloudStatus('暂未收到结果，请重试查看',true); }
     starting=false; controls(); $('draw-label').textContent='开启幸运'; toast(error.message || '网络异常，请重试'); return;
   }
-  const gifts=config.gifts.filter(g=>g.enabled).map(g=>({...g}));
-  const index=gifts.findIndex(g=>g.id===result.winner.id), winner=gifts[index];
-  if(!winner) { starting=false; controls(); toast('奖池响应异常，请重试'); return; }
+  const gifts=config.gifts.filter(g=>g.enabled);
+  const index=gifts.findIndex(g=>g.id===result.winner.id);
+  if(index<0) { starting=false; controls(); toast('奖池响应异常，请重试'); return; }
   starting=false;
   const reduced = matchMedia('(prefers-reduced-motion:reduce)').matches;
   const duration = reduced ? 80 : gifts.length === 1 ? 750 : 2900;
@@ -236,7 +236,7 @@ async function draw() {
   const finish = () => {
     if(finished) return; finished = true;
     clearTimeout(fallback); cancelAnimationFrame(frame); select(index);
-    stage.classList.remove('drawing'); stage.classList.add('won'); cards[index].classList.add('winner');
+    stage.classList.remove('drawing');
     receipt=result; rememberResult(result); drawing=false; showReceipt();
     if (!reduced) celebrate();
   };

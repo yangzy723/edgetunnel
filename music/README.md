@@ -6,7 +6,7 @@
 
 ## 音频管理
 
-- 原始文件：本目录的 `Test-A.mp3` 至 `Test-D.mp3`，由 `.gitignore` 忽略。此前归档的本机原件保存在仓库旁的 `edgetunnel-activity-originals/music/`，如需重新处理可复制回本目录。
+- 原始文件：本目录的 `Test-A.mp3` 至 `Test-D.mp3`，由 `.gitignore` 忽略。
 - 发布副本：`audio/track-a.mp3` 至 `audio/track-d.mp3`，**需要提交到 Git**，Cloudflare 的远程构建才能获取它们。
 - 修改原件后运行 `python3 music/prepare.py`。脚本去掉 ID3/APE 元数据，不重新编码、不修改原件；随后提交生成的发布副本。
 - 只提交原件的忽略规则，不把答案或原件一起发布。音频本身仍是访客可获取的公开资源。

@@ -46,13 +46,11 @@ function toast(message) {
   $('toast').textContent = message;
   $('toast').hidden = false;
   clearTimeout(toastTimer);
-  if ($('editor').open) {
-    $('editor-message').textContent = message;
-    $('editor-message').hidden = false
-  }
-  if ($('meal-editor')?.open) {
-    $('meal-editor-message').textContent = message;
-    $('meal-editor-message').hidden = false
+  for (const id of ['editor', 'meal-editor']) {
+    if ($(id)?.open) {
+      $(id + '-message').textContent = message;
+      $(id + '-message').hidden = false
+    }
   }
   toastTimer = setTimeout(() => $('toast').hidden = true, 4200)
 }
@@ -138,20 +136,10 @@ let hadLocal = (() => {
   }
 })();
 
-function persist() {
+function persist(data = state, suffix = ':cloud') {
   if (storageBlocked) return false;
   try {
-    localStorage.setItem(KEY + ':cloud', JSON.stringify(state));
-    return true
-  } catch {
-    return false
-  }
-}
-
-function persistMeals() {
-  if (storageBlocked) return false;
-  try {
-    localStorage.setItem(KEY + ':meals', JSON.stringify(meals));
+    localStorage.setItem(KEY + suffix, JSON.stringify(data));
     return true
   } catch {
     return false
@@ -187,7 +175,7 @@ function applyMeals(list) {
   if (!Array.isArray(list)) return;
   mealsEpoch++;
   meals = list.map(validateMealItem).filter(Boolean);
-  persistMeals()
+  persist(meals, ':meals')
 }
 
 async function syncMeals() {
@@ -1028,19 +1016,14 @@ $('import-file').onchange = async e => {
     toast('无法导入：请选择本页面导出的有效 JSON 备份')
   }
 };
-window.addEventListener('focus', () => {
+function syncAll() {
   syncPool();
   void syncMeals()
-});
-window.addEventListener('online', () => {
-  syncPool();
-  void syncMeals()
-});
+}
+window.addEventListener('focus', syncAll);
+window.addEventListener('online', syncAll);
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) {
-    syncPool();
-    void syncMeals()
-  }
+  if (!document.hidden) syncAll()
 });
 setInterval(() => {
   if (!document.hidden) syncPool()
@@ -1050,5 +1033,4 @@ setInterval(() => {
 }, 30000);
 $('today-date').textContent = new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' }).format(new Date());
 render();
-syncPool();
-void syncMeals();
+syncAll();

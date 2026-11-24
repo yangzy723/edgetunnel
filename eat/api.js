@@ -28,6 +28,18 @@ const EAT_MEALS_DELETE = 'DELETE FROM eat_meals WHERE id = ?';
 const EAT_MEALS_TRIM = 'DELETE FROM eat_meals WHERE id NOT IN (SELECT id FROM eat_meals ORDER BY eaten_at DESC, created_at DESC LIMIT 500)';
 const mealsInit = new WeakMap();
 
+function json(value, status = 200, extra = {}) {
+  return new Response(JSON.stringify(value), {
+    status,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff',
+      ...extra
+    }
+  });
+}
+
 function eatPoolData(row) {
   return row ? {
       revision: row.revision,
@@ -156,15 +168,6 @@ async function readJsonBody(request, maxBytes) {
 }
 
 export async function eatMealsAPI(request, env) {
-  const json = (value, status = 200, extra = {}) => new Response(JSON.stringify(value), {
-    status,
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Cache-Control': 'no-store',
-      'X-Content-Type-Options': 'nosniff',
-      ...extra
-    }
-  });
   if (!['GET', 'POST', 'PUT', 'DELETE'].includes(request.method)) return json({
     error: '不支持的请求方法'
   }, 405, {
@@ -247,15 +250,6 @@ export async function eatMealsAPI(request, env) {
   }
 }
 export async function eatPoolAPI(request, env) {
-  const json = (value, status = 200, extra = {}) => new Response(JSON.stringify(value), {
-    status,
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Cache-Control': 'no-store',
-      'X-Content-Type-Options': 'nosniff',
-      ...extra
-    }
-  });
   if (!['GET', 'PUT'].includes(request.method)) return json({
     error: '不支持的请求方法'
   }, 405, {
@@ -274,44 +268,14 @@ export async function eatPoolAPI(request, env) {
     if (request.headers.get('Content-Type')?.split(';')[0].trim().toLowerCase() !== 'application/json') return json({
       error: '需要 JSON 数据'
     }, 415);
-    if (Number(request.headers.get('Content-Length')) > 100000) return json({
-      error: '数据过大'
-    }, 413);
     try {
-      // Enforce the bound even for requests without Content-Length.
-      const reader = request.body?.getReader();
-      if (!reader) return json({
-        error: '缺少请求数据'
-      }, 400);
-      const chunks = [];
-      let length = 0;
-      while (true) {
-        const {
-          done,
-          value
-        } = await reader.read();
-        if (done) break;
-        length += value.byteLength;
-        if (length > 100000) {
-          await reader.cancel();
-          return json({
-            error: '数据过大'
-          }, 413)
-        }
-        chunks.push(value)
-      }
-      const bytes = new Uint8Array(length);
-      let offset = 0;
-      for (const chunk of chunks) {
-        bytes.set(chunk, offset);
-        offset += chunk.byteLength
-      }
-      body = JSON.parse(new TextDecoder().decode(bytes));
+      body = await readJsonBody(request, 100000);
       if (!Number.isSafeInteger(body.revision) || body.revision < 0) throw new Error('缺少有效的菜单版本');
       body.shops = eatValidateShops(body.shops);
     } catch (error) {
+      if (error.status === 413) return json({ error: '数据过大' }, 413);
       return json({
-        error: '请求数据不正确，请检查店铺信息'
+        error: error.message === 'MISSING' ? '缺少请求数据' : '请求数据不正确，请检查店铺信息'
       }, 400)
     }
   }

@@ -1,8 +1,9 @@
 import { DRAW_DEFAULTS, validateDrawConfig, pickDrawGift } from './model.js';
 
 const VISITOR_COOKIE = '__Host-draw_visitor';
-const visitorToken = request => (request.headers.get('Cookie') || '').split(';').map(x=>x.trim()).find(x=>x.startsWith(VISITOR_COOKIE+'='))?.slice(VISITOR_COOKIE.length+1);
-const COOKIE = '__Host-draw_admin';
+const ADMIN_COOKIE = '__Host-draw_admin';
+const cookieValue = (request,name) => (request.headers.get('Cookie') || '').split(';').map(x=>x.trim()).find(x=>x.startsWith(name+'='))?.slice(name.length+1);
+const cookie = (name,value,age) => `${name}=${value}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${age}`;
 const SELECT = 'SELECT revision, config, updated_at FROM draw_config WHERE id = 1';
 const json = (data, status = 200, headers = {}) => new Response(JSON.stringify(data), {
   status, headers: {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...headers}
@@ -55,14 +56,13 @@ async function signature(password,message) {
   return hex(await crypto.subtle.sign('HMAC',key,encode('draw-admin-v1:' + message)));
 }
 async function authorized(request,password) {
-  const token = (request.headers.get('Cookie') || '').split(';').map(x=>x.trim()).find(x=>x.startsWith(COOKIE+'='))?.slice(COOKIE.length+1);
+  const token = cookieValue(request,ADMIN_COOKIE);
   if(!token || token.length > 160) return false;
   const [expiry,nonce,mac,...rest] = token.split('.');
   const now = Math.floor(Date.now()/1000);
   if(rest.length || !/^\d{10}$/.test(expiry) || !/^[a-f0-9]{32}$/.test(nonce || '') || !/^[a-f0-9]{64}$/.test(mac || '') || Number(expiry) <= now || Number(expiry) > now+1800) return false;
   return equal(mac,await signature(password,expiry+'.'+nonce));
 }
-function cookie(value,age=1800) { return `${COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${age}`; }
 function pick(count) {
   const random = new Uint32Array(1), limit = Math.floor(4294967296/count)*count;
   do { crypto.getRandomValues(random); } while(random[0]>=limit);
@@ -70,15 +70,15 @@ function pick(count) {
 }
 
 export async function drawAPI(request,env) {
-  const path = new URL(request.url).pathname, method = request.method;
+  const url = new URL(request.url), path = url.pathname, method = request.method;
   const methods = path === '/draw/api/config' ? ['GET','PUT'] : path === '/draw/api/auth' ? ['GET','POST','DELETE'] : path === '/draw/api/draw' ? ['POST'] : path === '/draw/api/participation' ? ['GET'] : [];
   if(!methods.length) return json({error:'接口不存在'},404);
   if(!methods.includes(method)) return json({error:'不支持的请求方法'},405,{Allow:methods.join(', ')});
   if(method !== 'GET') {
     const origin = request.headers.get('Origin');
-    if((origin && origin !== new URL(request.url).origin) || request.headers.get('Sec-Fetch-Site') === 'cross-site') return json({error:'请从本站操作'},403);
+    if((origin && origin !== url.origin) || request.headers.get('Sec-Fetch-Site') === 'cross-site') return json({error:'请从本站操作'},403);
   }
-  if(path === '/draw/api/auth' && method === 'DELETE') return json({authenticated:false},200,{'Set-Cookie':cookie('',0)});
+  if(path === '/draw/api/auth' && method === 'DELETE') return json({authenticated:false},200,{'Set-Cookie':cookie(ADMIN_COOKIE,'',0)});
   try {
     let password;
     if(path === '/draw/api/auth' || method === 'PUT') {
@@ -102,7 +102,7 @@ export async function drawAPI(request,env) {
       if(!equal(await digest(attempt.password),await digest(password))) return json({error:'管理密码不正确'},401);
       await db.prepare('DELETE FROM draw_auth_attempts WHERE id = ?').bind(id).run();
       const message = (now+1800)+'.'+hex(crypto.getRandomValues(new Uint8Array(16)));
-      return json({authenticated:true},200,{'Set-Cookie':cookie(message+'.'+await signature(password,message))});
+      return json({authenticated:true},200,{'Set-Cookie':cookie(ADMIN_COOKIE,message+'.'+await signature(password,message),1800)});
     }
     if(method === 'PUT') {
       const input = await body(request);
@@ -116,7 +116,7 @@ export async function drawAPI(request,env) {
     }
     let visitor, visitorId;
     if(path === '/draw/api/participation' || path === '/draw/api/draw') {
-      const token = visitorToken(request);
+      const token = cookieValue(request,VISITOR_COOKIE);
       if(/^[a-f0-9]{64}$/.test(token || '')) {
         visitorId = await digest(token);
         visitor = await db.prepare('SELECT result FROM draw_visitors WHERE id = ?').bind(visitorId).first();
@@ -125,7 +125,7 @@ export async function drawAPI(request,env) {
         if(visitor) return json({result:visitor.result ? JSON.parse(visitor.result) : null});
         const token = hex(crypto.getRandomValues(new Uint8Array(32)));
         await db.prepare('INSERT INTO draw_visitors (id, result) VALUES (?, NULL)').bind(await digest(token)).run();
-        return json({result:null},200,{'Set-Cookie':`${VISITOR_COOKIE}=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=31536000`});
+        return json({result:null},200,{'Set-Cookie':cookie(VISITOR_COOKIE,token,31536000)});
       }
       if(!visitor) return json({error:'请允许本站 Cookie，并刷新页面后再试',code:'VISITOR_REQUIRED'},401);
     }
@@ -133,9 +133,9 @@ export async function drawAPI(request,env) {
     if(path === '/draw/api/draw') {
       if(visitor.result) return json({...current,...JSON.parse(visitor.result),alreadyDrawn:true});
       if(!current.config.activityEnabled) return json({error:'活动已暂停，请稍后再来',code:'PAUSED',...current},409);
-      const gifts = current.config.gifts.filter(gift => gift.enabled);
-      if(!gifts.length) return json({error:'好礼正在准备中，请稍后再来',code:'EMPTY',...current},409);
-      const result = {winner:pickDrawGift(gifts,pick),time:Date.now(),showQuantity:current.config.showQuantity};
+      const winner = pickDrawGift(current.config.gifts,pick);
+      if(!winner) return json({error:'好礼正在准备中，请稍后再来',code:'EMPTY',...current},409);
+      const result = {winner,time:Date.now(),showQuantity:current.config.showQuantity};
       // Only one concurrent request may claim this anonymous credential.
       const claimed = await db.prepare('UPDATE draw_visitors SET result = ? WHERE id = ? AND result IS NULL RETURNING result')
         .bind(JSON.stringify(result),visitorId).first();
